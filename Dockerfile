@@ -18,9 +18,12 @@ WORKDIR /var/www
 # Копируем код проекта в образ
 COPY . .
 
-# Ставим зависимости проекта
-RUN composer install --no-interaction --optimize-autoloader
+# Права на storage и bootstrap/cache (иначе Laravel не сможет писать логи и кэш)
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# PHP-FPM слушает порт 9000 внутри контейнера
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 EXPOSE 9000
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
