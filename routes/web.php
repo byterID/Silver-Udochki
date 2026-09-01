@@ -34,7 +34,11 @@ Route::middleware(['auth', 'permission:access_control_panel'])
     ->name('control-panel.')
     ->group(function () {
         Route::get('/', [ControlPanelController::class, 'index'])->name('index');
-        Route::get('/users', [UserController::class, 'index'])->name('users');
+        Route::get('/staff', [UserController::class, 'staff'])->name('staff');
+        Route::get('/customers', [UserController::class, 'customers'])->name('customers');
+        Route::post('/staff', [UserController::class, 'store'])->name('staff.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         // сюда потом добавишь promo, settings и т.д.
     });
 
