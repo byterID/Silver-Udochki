@@ -58,16 +58,18 @@
                 <tbody class="divide-y divide-gray-100">
                 @forelse ($roles as $role)
                     <tr class="cursor-pointer hover:bg-gray-50"
-                        @click="openEdit({
-                                id: {{ $permission->id }},
-                                name: @js($permission->name),
-                                title: @js($permission->title),
-                                action_group_id: {{ $permission->action_group_id ?? 'null' }}
-                            })">
-                        <td class="px-4 py-3 font-mono text-gray-500">{{ $permission->id }}</td>
-                        <td class="px-4 py-3 font-medium text-gray-800">{{ $permission->title ?? '—' }}</td>
-                        <td class="px-4 py-3 font-mono text-xs text-gray-400">{{ $permission->name }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $permission->actionGroup?->name ?? '—' }}</td>
+                        @click="openRole({
+                            id: {{ $role->id }},
+                            name: @js($role->name),
+                            permissions: @js($role->permissions->pluck('id'))
+                        })">
+                            <td class="px-4 py-3 font-mono text-gray-500">{{ $role->id }}</td>
+                            <td class="px-4 py-3 font-medium text-gray-800">{{ $role->name }}</td>
+                            <td class="px-4 py-3">
+                            <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                                {{ $role->permissions->count() }} из {{ $permissionsCount }}
+                            </span>
+                        </td>
                     </tr>
                 @empty
                     <tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Групп пока нет</td></tr>
