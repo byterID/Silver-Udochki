@@ -5,7 +5,7 @@
             <h3 class="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Разделы</h3>
             <nav class="flex flex-col gap-1">
                 {{-- Выпадающее меню "Пользователи" --}}
-                <div x-data="{ open: {{ request()->routeIs('control-panel.staff', 'control-panel.customers') ? 'true' : 'false' }} }">
+                <div x-data="{ open: {{ request()->routeIs('control-panel.staff', 'control-panel.customers', 'control-panel.permissions', 'control-panel.access-control', 'control-panel.action-groups') ? 'true' : 'false' }} }">
                     <button type="button" @click="open = !open"
                             class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100">
                         <span>👤 Пользователи</span>
@@ -18,20 +18,32 @@
                     <div x-show="open" x-collapse class="ml-3 mt-1 flex flex-col gap-1 border-l border-gray-200 pl-3">
                         <a href="{{ route('control-panel.staff') }}"
                            class="rounded-lg px-3 py-2 text-sm font-medium transition
-                                  {{ request()->routeIs('control-panel.staff')
-                                     ? 'bg-indigo-50 text-indigo-700'
-                                     : 'text-gray-700 hover:bg-gray-100' }}">
+                  {{ request()->routeIs('control-panel.staff') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100' }}">
                             👥 Сотрудники
                         </a>
                         <a href="{{ route('control-panel.customers') }}"
                            class="rounded-lg px-3 py-2 text-sm font-medium transition
-                                  {{ request()->routeIs('control-panel.customers')
-                                     ? 'bg-indigo-50 text-indigo-700'
-                                     : 'text-gray-700 hover:bg-gray-100' }}">
+                  {{ request()->routeIs('control-panel.customers') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100' }}">
                             🛒 Покупатели
+                        </a>
+                        <a href="{{ route('control-panel.permissions') }}"
+                           class="rounded-lg px-3 py-2 text-sm font-medium transition
+                  {{ request()->routeIs('control-panel.permissions') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100' }}">
+                            ⚙️ Действия в системе
+                        </a>
+                        <a href="{{ route('control-panel.access-control') }}"
+                           class="rounded-lg px-3 py-2 text-sm font-medium transition
+                  {{ request()->routeIs('control-panel.access-control') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100' }}">
+                            🔐 Управление доступом
+                        </a>
+                        <a href="{{ route('control-panel.action-groups') }}"
+                           class="rounded-lg px-3 py-2 text-sm font-medium transition
+          {{ request()->routeIs('control-panel.action-groups') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100' }}">
+                            📁 Группы действий
                         </a>
                     </div>
                 </div>
+
             </nav>
         </aside>
 
