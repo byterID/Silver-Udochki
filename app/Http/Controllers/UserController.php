@@ -1,126 +1,127 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Enums\RoleName;
+use App\Http\Requests\ControlPanel\DeleteUserRequest;
+use App\Http\Requests\ControlPanel\StoreUserRequest;
+use App\Http\Requests\ControlPanel\UpdateUserRequest;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use App\Services\UserService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
-    // Сотрудники — все, кроме ролей User и Guest
-    public function staff(Request $request)
-    {
-        $users = $this->filteredUsers($request, staff: true)->paginate(20)->withQueryString();
-        $roles = Role::all();
+    private const SORTABLE = ['name', 'email', 'created_at'];
 
-        return view('users.staff', compact('users', 'roles'));
+    public function __construct(private readonly UserService $users)
+    {
     }
 
-    // Покупатели — все с ролью User
-    public function customers(Request $request)
+    public function staff(Request $request): View
     {
-        $users = $this->filteredUsers($request, staff: false)->paginate(20)->withQueryString();
-        $roles = Role::all();
+        $this->authorize('viewAny', User::class);
 
-        return view('users.customers', compact('users', 'roles'));
+        return view('users.staff', [
+            'users' => $this->filtered($request, RoleName::staffValues())
+                ->paginate(20)
+                ->withQueryString(),
+            'roles' => $this->assignableRoles($request),
+        ]);
     }
 
-    private function filteredUsers(Request $request, bool $staff)
+    public function customers(Request $request): View
     {
-        $query = User::query();
+        $this->authorize('viewAny', User::class);
 
-        if ($staff) {
-            $query->whereHas('roles', fn ($q) => $q->whereNotIn('name', ['user', 'guest']));
-        } else {
-            $query->whereHas('roles', fn ($q) => $q->where('name', 'user'));
-        }
+        return view('users.customers', [
+            'users' => $this->filtered($request, RoleName::customerValues())
+                ->paginate(20)
+                ->withQueryString(),
+            'roles' => $this->assignableRoles($request),
+        ]);
+    }
+
+    public function store(StoreUserRequest $request): RedirectResponse
+    {
+        $user = $this->users->create($request->validated(), $request->user());
+
+        return back()->with('status', "Пользователь «{$user->name}» создан");
+    }
+
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    {
+        $this->users->update($user, $request->validated(), $request->user());
+
+        return back()->with('status', "Пользователь «{$user->name}» обновлён");
+    }
+
+    public function destroy(DeleteUserRequest $request, User $user): RedirectResponse
+    {
+        $name = $user->name;
+
+        $this->users->delete($user, $request->user());
+
+        return back()->with('status', "Пользователь «{$name}» удалён");
+    }
+
+    private function filtered(Request $request, array $roleNames): Builder
+    {
+        $query = User::query()
+            ->with('roles:id,name')
+            ->whereHas('roles', fn (Builder $q) => $q->whereIn('name', $roleNames));
 
         if ($request->filled('name')) {
-            $query->where('name', 'ilike', '%'.$request->input('name').'%');
+            $query->where('name', 'ilike', '%'.$this->escapeLike($request->string('name')->value()).'%');
         }
+
         if ($request->filled('email')) {
-            $query->where('email', 'ilike', '%'.$request->input('email').'%');
-        }
-        if ($staff && $request->filled('role')) {
-            $role = $request->input('role');
-            $query->whereHas('roles', fn ($q) => $q->where('name', 'ilike', '%'.$role.'%'));
+            $query->where('email', 'ilike', '%'.$this->escapeLike($request->string('email')->value()).'%');
         }
 
-        $sort = in_array($request->input('sort'), ['name', 'email', 'created_at'])
+        if ($request->filled('role')) {
+            $role = $request->string('role')->value();
+
+            if (in_array($role, $roleNames, true)) {
+                $query->whereHas('roles', fn (Builder $q) => $q->where('name', $role));
+            }
+        }
+
+        $sort = in_array($request->input('sort'), self::SORTABLE, true)
             ? $request->input('sort')
-            : 'name';
-        $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
-        $query->orderBy($sort, $direction);
+            : 'created_at';
 
-        return $query;
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        return $query->orderBy($sort, $direction);
     }
 
-    // Создание нового сотрудника (из модалки)
-    public function store(Request $request)
+    /**
+     * Роли, которые текущий пользователь вправе назначать.
+     * Нужно, чтобы в выпадающем списке не было заведомо запрещённых вариантов.
+     *
+     * @return array<int, RoleName>
+     */
+    private function assignableRoles(Request $request): array
     {
-        $data = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users,email',
-            'password' => ['required', 'confirmed', Password::min(8)],
-            'role'     => 'required|exists:roles,name',
-        ]);
+        $level = $request->user()->highestRoleLevel();
+        $strict = (bool) config('access.strict_hierarchy', true);
 
-        $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-        ]);
-
-        $user->assignRole($data['role']);
-
-        return back()->with('status', 'Пользователь «'.$user->name.'» создан');
+        return array_values(array_filter(
+            RoleName::cases(),
+            fn (RoleName $role) => $strict
+                ? $role->level() < $level
+                : $role->level() <= $level
+        ));
     }
 
-    // Редактирование имени, email и роли (из модалки)
-    public function update(Request $request, User $user)
+    private function escapeLike(string $value): string
     {
-        $data = $request->validate([
-            'name'  => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
-            'role'  => 'required|exists:roles,name',
-        ]);
-
-        $user->update([
-            'name'  => $data['name'],
-            'email' => $data['email'],
-        ]);
-
-        $user->syncRoles([$data['role']]);
-
-        return back()->with('status', 'Данные пользователя обновлены');
-    }
-
-    // Удаление с подтверждением через повторный ввод email
-    public function destroy(Request $request, User $user)
-    {
-        $request->validate([
-            'email_confirmation' => 'required|string',
-        ]);
-
-        if ($request->input('email_confirmation') !== $user->email) {
-            return back()->withErrors([
-                'email_confirmation' => 'Введённый email не совпадает с email пользователя.',
-            ]);
-        }
-
-        // Защита: не даём удалить самого себя
-        if ($user->id === $request->user()->id) {
-            return back()->withErrors([
-                'email_confirmation' => 'Нельзя удалить собственную учётную запись.',
-            ]);
-        }
-
-        $name = $user->name;
-        $user->delete();
-
-        return back()->with('status', 'Пользователь «'.$name.'» удалён');
+        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
     }
 }

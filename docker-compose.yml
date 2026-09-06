@@ -4,38 +4,58 @@ services:
             context: .
             dockerfile: Dockerfile
         container_name: silver-udochki-app
+        restart: unless-stopped
+        env_file: .env
+        environment:
+            RUN_MIGRATIONS: "${RUN_MIGRATIONS:-false}"
         volumes:
             - .:/var/www
+            - app-storage:/var/www/storage/framework
         depends_on:
             db:
                 condition: service_healthy
+        networks:
+            - internal
 
     web:
-        image: nginx:alpine
+        image: nginx:1.27-alpine
         container_name: silver-udochki-web
+        restart: unless-stopped
         ports:
-            - "8080:80"
+            - "127.0.0.1:8080:80"
         volumes:
-            - .:/var/www
-            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+            - .:/var/www:ro
+            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
         depends_on:
             - app
+        networks:
+            - internal
+
     db:
-        image: postgres:17
+        image: postgres:17-alpine
         container_name: silver-udochki-db
+        restart: unless-stopped
         environment:
-            POSTGRES_DB: silver-udochki
-            POSTGRES_USER: udochki
-            POSTGRES_PASSWORD: secret
+            POSTGRES_DB: "${DB_DATABASE:?укажите DB_DATABASE в .env}"
+            POSTGRES_USER: "${DB_USERNAME:?укажите DB_USERNAME в .env}"
+            POSTGRES_PASSWORD: "${DB_PASSWORD:?укажите DB_PASSWORD в .env}"
+        # Порт только для локального доступа с хоста, не для внешней сети.
         ports:
-            - "5432:5432"
+            - "127.0.0.1:5432:5432"
         volumes:
             - db-data:/var/lib/postgresql/data
         healthcheck:
-            test: [ "CMD-SHELL", "pg_isready -U udochki -d silver-udochki" ]
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
             interval: 5s
             timeout: 5s
-            retries: 5
+            retries: 10
+        networks:
+            - internal
 
 volumes:
     db-data:
+    app-storage:
+
+networks:
+    internal:
+        driver: bridge

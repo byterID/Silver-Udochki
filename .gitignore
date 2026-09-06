@@ -1,30 +1,33 @@
 /vendor/
-node_modules/
+/node_modules/
 npm-debug.log
 yarn-error.log
 
-# Laravel 4 specific
-bootstrap/compiled.php
-app/storage/
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/bootstrap/cache/*.php
 
-# Laravel 5 & Lumen specific
-public/storage
-public/hot
-
-# Laravel 5 & Lumen specific with changed public path
-public_html/storage
-public_html/hot
-
-storage/*.key
+# Переменные окружения: игнорируем все, кроме примера
 .env
+.env.*
+!.env.example
+
+# Локальные артефакты
+.phpunit.result.cache
+.phpunit.cache
+auth.json
 Homestead.yaml
 Homestead.json
 /.vagrant
-.phpunit.result.cache
 
-/public/build
-/storage/pail
-.env.backup
-.env.production
+# IDE и ОС
+/.idea
+/.vscode
+/.fleet
+/.zed
 .phpactor.json
-auth.json
+.DS_Store
+Thumbs.db

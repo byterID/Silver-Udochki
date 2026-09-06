@@ -1,11 +1,28 @@
 <?php
 
-return [
-    // Роль, у которой нельзя отбирать критичные права
-    'super_role' => 'admin',
+declare(strict_types=1);
 
-    // Права, которые всегда должны оставаться у super_role
+use App\Enums\PermissionCode;
+use App\Enums\RoleName;
+
+return [
+
+    'super_role' => RoleName::Admin->value,
+
     'locked_permissions' => [
-        'access_control_panel',
+        PermissionCode::AccessControlPanel->value,
+        PermissionCode::ManageAccess->value,
+    ],
+
+    'exclusive_permissions' => [
+        PermissionCode::ManageAccess->value,
+    ],
+
+    'strict_hierarchy' => true,
+
+    'admin' => [
+        'name' => env('ADMIN_NAME', 'Администратор'),
+        'email' => env('ADMIN_EMAIL'),
+        'password' => env('ADMIN_PASSWORD'),
     ],
 ];
