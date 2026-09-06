@@ -8,7 +8,7 @@
             <button type="button" @click="showCreate = false" class="text-gray-400 hover:text-gray-600">✕</button>
         </div>
 
-        <form method="POST" action="{{ route('control-panel.staff.store') }}" class="flex flex-col gap-4">
+        <form method="POST" action="{{ route('control-panel.users.store') }}" class="flex flex-col gap-4">
             @csrf
             <div>
                 <label class="mb-1 block text-sm font-medium text-gray-700">Имя</label>

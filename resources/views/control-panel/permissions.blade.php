@@ -19,18 +19,9 @@
 
         <div class="mb-6 flex items-center justify-between">
             <h1 class="text-2xl font-semibold text-gray-800">Действия в системе</h1>
-            <div class="flex items-center gap-3">
-                <span class="rounded-full bg-indigo-100 px-3 py-1 text-sm text-indigo-700">
-                    Всего: {{ $permissions->count() }}
-                </span>
-                <button type="button" @click="openCreate()"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Создать действие
-                </button>
-            </div>
+            <span class="rounded-full bg-indigo-100 px-3 py-1 text-sm text-indigo-700">
+                Всего: {{ $permissions->count() }}
+            </span>
         </div>
 
         @if (session('status'))
@@ -82,12 +73,10 @@
                     <button type="button" @click="showModal = false" class="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
 
-                <form :action="mode === 'create' ? '{{ route('control-panel.permissions.store') }}' : '/control-panel/permissions/' + form.id"
+                <form :action="'{{ route('control-panel.permissions.update', ['permission' => '__ID__']) }}'.replace('__ID__', form.id)"
                       method="POST" class="flex flex-col gap-4">
                     @csrf
-                    <template x-if="mode === 'edit'">
-                        <input type="hidden" name="_method" value="PUT">
-                    </template>
+                    @method('PUT')
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700">Название</label>
@@ -98,12 +87,10 @@
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700">Код действия (латиницей)</label>
-                        <input type="text" name="name" x-model="form.name" required
-                               placeholder="например: access_control_panel"
-                               class="w-full rounded-md border-gray-300 font-mono text-sm shadow-sm focus:border-indigo-400 focus:ring-indigo-400">
-                        <p class="mt-1 text-xs text-gray-400">Используется в коде системы. Латинские буквы, цифры и подчёркивания.</p>
-                        @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        <label class="mb-1 block text-sm font-medium text-gray-700">Код действия</label>
+                        <input type="text" x-model="form.name" readonly disabled
+                               class="w-full rounded-md border-gray-200 bg-gray-100 font-mono text-sm text-gray-500">
+                        <p class="mt-1 text-xs text-gray-400">Задаётся в коде системы и не меняется через панель.</p>
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700">Группа действий</label>

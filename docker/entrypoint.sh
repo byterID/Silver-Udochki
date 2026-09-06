@@ -21,7 +21,9 @@ if [ "${APP_ENV:-production}" = "production" ]; then
     php artisan view:cache
     php artisan event:cache
 else
-    php artisan optimize:clear
+  php artisan config:clear || true
+  php artisan route:clear || true
+  php artisan view:clear || true
 fi
 
 exec "$@"
