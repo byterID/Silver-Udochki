@@ -1,57 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ControlPanel\UpdatePermissionRequest;
 use App\Models\ActionGroup;
 use App\Models\Permission;
-use Illuminate\Http\Request;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Spatie\Permission\PermissionRegistrar;
 
 class PermissionController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        $permissions = Permission::with('actionGroup')->orderBy('id')->get();
-        $groups      = ActionGroup::orderBy('name')->get();
-
-        return view('control-panel.permissions', compact('permissions', 'groups'));
+        return view('control-panel.permissions', [
+            'permissions' => Permission::with('actionGroup')->orderBy('id')->get(),
+            'groups' => ActionGroup::orderBy('name')->get(),
+        ]);
     }
 
-    public function store(Request $request)
+    public function update(UpdatePermissionRequest $request, Permission $permission): RedirectResponse
     {
-        $data = $request->validate([
-            'name'            => 'required|string|max:255|unique:permissions,name',
-            'title'           => 'required|string|max:255',
-            'action_group_id' => 'nullable|exists:action_groups,id',
-        ]);
+        $permission->update($request->validated());
 
-        Permission::create([
-            'name'            => $data['name'],
-            'title'           => $data['title'],
-            'action_group_id' => $data['action_group_id'] ?? null,
-            'guard_name'      => 'web',
-        ]);
-
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-
-        return back()->with('status', 'Действие «'.$data['title'].'» создано');
-    }
-
-    public function update(Request $request, Permission $permission)
-    {
-        $data = $request->validate([
-            'name'            => 'required|string|max:255|unique:permissions,name,'.$permission->id,
-            'title'           => 'required|string|max:255',
-            'action_group_id' => 'nullable|exists:action_groups,id',
-        ]);
-
-        $permission->update([
-            'name'            => $data['name'],
-            'title'           => $data['title'],
-            'action_group_id' => $data['action_group_id'] ?? null,
-        ]);
-
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return back()->with('status', 'Действие обновлено');
     }

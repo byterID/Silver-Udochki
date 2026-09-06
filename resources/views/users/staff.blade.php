@@ -19,6 +19,7 @@
             <span class="rounded-full bg-indigo-100 px-3 py-1 text-sm text-indigo-700">
                 Всего: {{ $users->total() }}
             </span>
+                @can('create', App\Models\User::class)
                 <button type="button" @click="showCreate = true"
                         class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,6 +27,7 @@
                     </svg>
                     Создать пользователя
                 </button>
+                @endcan
             </div>
         </div>
 
@@ -63,6 +65,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                 @forelse ($users as $user)
+                    @can('update', $user)
                     <tr class="cursor-pointer hover:bg-gray-50"
                         @click="openEdit({
                             id: {{ $user->id }},
@@ -78,6 +81,7 @@
                             </span>
                         </td>
                     </tr>
+                    @endcan
                 @empty
                     <tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Ничего не найдено</td></tr>
                 @endforelse

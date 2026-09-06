@@ -1,37 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ControlPanel\StoreActionGroupRequest;
+use App\Http\Requests\ControlPanel\UpdateActionGroupRequest;
 use App\Models\ActionGroup;
-use Illuminate\Http\Request;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class ActionGroupController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        $groups = ActionGroup::withCount('permissions')->orderBy('id')->get();
-
-        return view('control-panel.action-groups', compact('groups'));
+        return view('control-panel.action-groups', [
+            'groups' => ActionGroup::withCount('permissions')->orderBy('id')->get(),
+        ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreActionGroupRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255|unique:action_groups,name',
-        ]);
+        $group = ActionGroup::create($request->validated());
 
-        ActionGroup::create($data);
-
-        return back()->with('status', 'Группа «'.$data['name'].'» создана');
+        return back()->with('status', "Группа «{$group->name}» создана");
     }
 
-    public function update(Request $request, ActionGroup $actionGroup)
+    public function update(UpdateActionGroupRequest $request, ActionGroup $actionGroup): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255|unique:action_groups,name,'.$actionGroup->id,
-        ]);
-
-        $actionGroup->update($data);
+        $actionGroup->update($request->validated());
 
         return back()->with('status', 'Название группы обновлено');
     }
