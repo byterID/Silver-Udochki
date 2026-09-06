@@ -10,7 +10,6 @@ services:
             RUN_MIGRATIONS: "${RUN_MIGRATIONS:-false}"
         volumes:
             - .:/var/www
-            - app-storage:/var/www/storage/framework
         depends_on:
             db:
                 condition: service_healthy
@@ -54,7 +53,6 @@ services:
 
 volumes:
     db-data:
-    app-storage:
 
 networks:
     internal:

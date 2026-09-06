@@ -19,9 +19,7 @@ class UserController extends Controller
 {
     private const SORTABLE = ['name', 'email', 'created_at'];
 
-    public function __construct(private readonly UserService $users)
-    {
-    }
+    public function __construct(private readonly UserService $users) {}
 
     public function staff(Request $request): View
     {

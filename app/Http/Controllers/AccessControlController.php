@@ -8,9 +8,9 @@ use App\Enums\RoleName;
 use App\Http\Requests\ControlPanel\UpdateRoleAccessRequest;
 use App\Models\ActionGroup;
 use App\Models\Permission;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Collection;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -51,7 +51,7 @@ class AccessControlController extends Controller
     {
         $roleLevel = RoleName::tryFrom($role->name)?->level() ?? 0;
 
-        $this->authorize('manageRoleAccess', [\App\Models\User::class, $roleLevel]);
+        $this->authorize('manageRoleAccess', [User::class, $roleLevel]);
 
         $actor = $request->user();
         $superRole = (string) config('access.super_role');
