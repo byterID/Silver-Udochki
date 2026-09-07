@@ -1,0 +1,11 @@
+title = "Silver Udochki"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Фикстуры тестов: пароли-заглушки, не настоящие секреты"
+paths = [
+    '''tests/TestCase\.php''',
+    '''tests/Feature/Auth/.*\.php''',
+]
