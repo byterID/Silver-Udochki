@@ -6,6 +6,7 @@ namespace App\Http\Requests\ControlPanel;
 
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class DeleteUserRequest extends FormRequest
 {
@@ -21,9 +22,9 @@ class DeleteUserRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (Validator $validator): void {
             $typed = mb_strtolower(trim((string) $this->input('email_confirmation')));
 
             if (! hash_equals(mb_strtolower($this->targetUser()->email), $typed)) {

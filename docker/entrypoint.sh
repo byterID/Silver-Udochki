@@ -15,15 +15,16 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force --isolated
 fi
 
-if [ "${APP_ENV:-production}" = "production" ]; then
+# Кэширование конфига — явный шаг деплоя, а не догадка по пустой переменной.
+if [ "${OPTIMIZE_ON_BOOT:-false}" = "true" ]; then
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
     php artisan event:cache
 else
-  php artisan config:clear || true
-  php artisan route:clear || true
-  php artisan view:clear || true
+    php artisan config:clear || true
+    php artisan route:clear || true
+    php artisan view:clear || true
 fi
 
 exec "$@"

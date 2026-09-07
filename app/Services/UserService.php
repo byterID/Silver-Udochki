@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class UserService
@@ -19,6 +20,7 @@ class UserService
                 'email' => $data['email'],
                 // Хэширование делает каст 'hashed' в модели — Hash::make не нужен
                 'password' => $data['password'],
+                'email_verified_at' => now(),
             ]);
 
             $user->syncRoles([$data['role']]);
@@ -46,7 +48,8 @@ class UserService
 
             if (filled($data['password'] ?? null)) {
                 $user->password = $data['password'];
-                $user->setRememberToken(null); // разлогинить старые сессии «запомнить меня»
+                $user->setRememberToken(Str::random(60));
+
             }
 
             $user->save();

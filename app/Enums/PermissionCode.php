@@ -21,7 +21,7 @@ enum PermissionCode: string
         };
     }
 
-    public function group(): ?string
+    public function group(): string
     {
         return match ($this) {
             self::AccessControlPanel, self::ManageAccess => 'Администрирование',

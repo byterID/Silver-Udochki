@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\RoleName;
+use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,8 +16,9 @@ use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
+    /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable;
 
     protected function casts(): array
@@ -29,7 +32,8 @@ class User extends Authenticatable
     public function highestRoleLevel(): int
     {
         return (int) $this->roles
-            ->map(fn ($role) => RoleName::tryFrom($role->name)?->level() ?? 0)
+            ->pluck('name')
+            ->map(fn ($name) => RoleName::tryFrom((string) $name)?->level() ?? 0)
             ->max();
     }
 
