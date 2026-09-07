@@ -34,7 +34,13 @@ jobs:
           extensions: pdo_pgsql, intl
           coverage: none
 
-      - name: Установить зависимости
+      - name: Настроить Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Установить зависимости PHP
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Подготовить окружение
@@ -43,6 +49,11 @@ jobs:
           php artisan key:generate
         env:
           APP_ENV: testing
+
+      - name: Собрать фронтенд
+        run: |
+          npm ci
+          npm run build
 
       - name: Проверить стиль кода
         run: vendor/bin/pint --test

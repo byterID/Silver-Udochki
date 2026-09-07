@@ -55,8 +55,8 @@ class AccessControlController extends Controller
 
         $actor = $request->user();
         $superRole = (string) config('access.super_role');
-        $locked = collect(config('access.locked_permissions', []));
-        $exclusive = collect(config('access.exclusive_permissions', []));
+        $locked = collect((array) config('access.locked_permissions', []));
+        $exclusive = collect((array) config('access.exclusive_permissions', []));
 
         $selected = Permission::whereIn('id', $request->validated()['permissions'] ?? [])
             ->pluck('name');

@@ -20,13 +20,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // 1. Права и их группы — источник истины в PermissionCode
         foreach (PermissionCode::cases() as $code) {
-            $group = $code->group() === null
-                ? null
-                : ActionGroup::firstOrCreate(['name' => $code->group()]);
+            $group = ActionGroup::firstOrCreate(['name' => $code->group()]);
 
             Permission::updateOrCreate(
                 ['name' => $code->value, 'guard_name' => 'web'],
-                ['title' => $code->title(), 'action_group_id' => $group?->id],
+                ['title' => $code->title(), 'action_group_id' => $group->id],
             );
         }
 
