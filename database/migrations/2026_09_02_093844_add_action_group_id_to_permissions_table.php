@@ -20,7 +20,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('permissions', function (Blueprint $table) {
-            $table->dropConstrainedForeignKey('action_group_id');
+            $table->dropConstrainedForeignId('action_group_id');
         });
     }
 };

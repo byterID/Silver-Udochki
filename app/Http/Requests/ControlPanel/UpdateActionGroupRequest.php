@@ -8,7 +8,7 @@ use App\Enums\PermissionCode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreActionGroupRequest extends FormRequest
+class UpdateActionGroupRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -18,7 +18,10 @@ class StoreActionGroupRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('action_groups', 'name')],
+            'name' => [
+                'required', 'string', 'max:255',
+                Rule::unique('action_groups', 'name')->ignore($this->route('actionGroup')),
+            ],
         ];
     }
 }

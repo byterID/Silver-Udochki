@@ -68,6 +68,9 @@ class UserController extends Controller
         return back()->with('status', "Пользователь «{$name}» удалён");
     }
 
+    /**
+     * @return Builder<User>
+     */
     private function filtered(Request $request, array $roleNames): Builder
     {
         $query = User::query()
