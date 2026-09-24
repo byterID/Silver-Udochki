@@ -10,7 +10,8 @@
         </div>
 
         {{-- Форма изменения --}}
-        <form :action="'/control-panel/users/' + editUser.id" method="POST" class="flex flex-col gap-4">
+        <form :action="'{{ route('control-panel.users.update', ['user' => '__ID__']) }}'.replace('__ID__', editUser.id)"
+              method="POST" class="flex flex-col gap-4">
             @csrf
             @method('PUT')
             <div>
@@ -48,7 +49,8 @@
             </template>
 
             <template x-if="confirmingDelete">
-                <form :action="'/control-panel/users/' + editUser.id" method="POST" class="flex flex-col gap-3">
+                <form :action="'{{ route('control-panel.users.destroy', ['user' => '__ID__']) }}'.replace('__ID__', editUser.id)"
+                      method="POST" class="flex flex-col gap-4">
                     @csrf
                     @method('DELETE')
                     <p class="text-sm text-gray-600">

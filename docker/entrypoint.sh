@@ -1,17 +1,30 @@
 #!/bin/sh
-set -e
+set -eu
 
+# .env и APP_KEY готовятся заранее (локально — вручную, в проде — секретами
+# оркестратора). Генерировать ключ при старте нельзя: он меняется на каждый
+# перезапуск и делает нечитаемыми сессии и зашифрованные данные.
 if [ ! -f .env ]; then
-    cp .env.example .env
+    echo "ОШИБКА: файл .env отсутствует. Скопируйте .env.example и заполните его." >&2
+    exit 1
 fi
 
-if ! grep -q "^APP_KEY=base64" .env; then
-    php artisan key:generate --force
+# Миграции — осознанный шаг, а не побочный эффект запуска контейнера.
+if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
+    echo "Запуск миграций..."
+    php artisan migrate --force --isolated
 fi
 
-until php artisan migrate --force 2>/dev/null; do
-    echo "Waiting for database..."
-    sleep 2
-done
+# Кэширование конфига — явный шаг деплоя, а не догадка по пустой переменной.
+if [ "${OPTIMIZE_ON_BOOT:-false}" = "true" ]; then
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    php artisan event:cache
+else
+    php artisan config:clear || true
+    php artisan route:clear || true
+    php artisan view:clear || true
+fi
 
 exec "$@"
