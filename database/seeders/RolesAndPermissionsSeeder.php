@@ -1,29 +1,39 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Enums\PermissionCode;
+use App\Enums\RoleName;
+use App\Models\ActionGroup;
+use App\Models\Permission;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
+
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        Permission::create(['name' => 'access_admin_panel']);
-        Permission::create(['name' => 'create_promo']);
-        Permission::create(['name' => 'export_users']);
-        // ...добавь свои действия
+        // 1. Права и их группы — источник истины в PermissionCode
+        foreach (PermissionCode::cases() as $code) {
+            $group = ActionGroup::firstOrCreate(['name' => $code->group()]);
 
-        // 2. создать роли
-        $admin = Role::create(['name' => 'admin']);
-        $user  = Role::create(['name' => 'user']);
-        $guest = Role::create(['name' => 'guest']);
+            Permission::updateOrCreate(
+                ['name' => $code->value, 'guard_name' => 'web'],
+                ['title' => $code->title(), 'action_group_id' => $group->id],
+            );
+        }
 
-        // 3. включить "ползунки" — раздать разрешения ролям
-        $admin->givePermissionTo(Permission::all());   // админу всё
-        $user->givePermissionTo(['export_users']);     // пользователю только выгрузка
+        // 2. Роли и их права по умолчанию
+        foreach (RoleName::cases() as $roleName) {
+            $role = Role::findOrCreate($roleName->value, 'web');
+            $role->syncPermissions($roleName->defaultPermissions());
+        }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
