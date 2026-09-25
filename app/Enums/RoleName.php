@@ -66,6 +66,6 @@ enum RoleName: string
 
     public static function customerValues(): array
     {
-        return [self::User->value];
+        return [self::User->value, self::Guest->value];
     }
 }

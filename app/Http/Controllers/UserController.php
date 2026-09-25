@@ -74,7 +74,7 @@ class UserController extends Controller
     private function filtered(Request $request, array $roleNames): Builder
     {
         $query = User::query()
-            ->with('roles:id,name')
+            ->with('roles')
             ->whereHas('roles', fn (Builder $q) => $q->whereIn('name', $roleNames));
 
         if ($request->filled('name')) {
@@ -104,7 +104,6 @@ class UserController extends Controller
 
     /**
      * Роли, которые текущий пользователь вправе назначать.
-     * Нужно, чтобы в выпадающем списке не было заведомо запрещённых вариантов.
      *
      * @return array<int, RoleName>
      */
