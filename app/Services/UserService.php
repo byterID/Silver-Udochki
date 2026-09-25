@@ -15,13 +15,16 @@ class UserService
     public function create(array $data, User $actor): User
     {
         return DB::transaction(function () use ($data, $actor) {
-            $user = User::create([
+            $user = new User([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 // Хэширование делает каст 'hashed' в модели — Hash::make не нужен
                 'password' => $data['password'],
-                'email_verified_at' => now(),
             ]);
+
+            // email_verified_at не входит в Fillable, поэтому ставим его через forceFill,
+            // иначе в строгом режиме (shouldBeStrict) будет MassAssignmentException.
+            $user->forceFill(['email_verified_at' => now()])->save();
 
             $user->syncRoles([$data['role']]);
 
@@ -49,7 +52,6 @@ class UserService
             if (filled($data['password'] ?? null)) {
                 $user->password = $data['password'];
                 $user->setRememberToken(Str::random(60));
-
             }
 
             $user->save();
