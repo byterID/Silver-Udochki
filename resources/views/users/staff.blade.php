@@ -1,11 +1,28 @@
 @extends('control-panel.layout')
 
 @section('panel-content')
+    @php
+        $failedForm = $errors->any() ? old('_form') : null;
+
+        $initialEditUser = in_array($failedForm, ['edit', 'delete'], true)
+            ? [
+                'id' => (int) old('_user_id'),
+                'name' => (string) old($failedForm === 'edit' ? 'name' : '_user_name', ''),
+                'email' => (string) old($failedForm === 'edit' ? 'email' : '_user_email', ''),
+                'role' => (string) old($failedForm === 'edit' ? 'role' : '_user_role', ''),
+            ]
+            : ['id' => null, 'name' => '', 'email' => '', 'role' => ''];
+
+        $initialState = [
+            'showCreate' => $failedForm === 'create',
+            'showEdit' => in_array($failedForm, ['edit', 'delete'], true),
+            'confirmingDelete' => $failedForm === 'delete',
+            'editUser' => $initialEditUser,
+        ];
+    @endphp
+
     <div x-data="{
-        showCreate: false,
-        showEdit: false,
-        confirmingDelete: false,
-        editUser: { id: null, name: '', email: '', role: '' },
+        ...@js($initialState),
         openEdit(user) {
             this.editUser = user;
             this.confirmingDelete = false;
@@ -56,7 +73,7 @@
                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-400 focus:ring-indigo-400">
                         </th>
                         <th class="px-4 py-2 flex items-center gap-2">
-                            <input type="text" name="role" value="{{ request('role') }}" placeholder="Поиск по роли"
+                            <input type="text" name="role" value="{{ request('role') }}" placeholder="admin / manager"
                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-400 focus:ring-indigo-400">
                             <button type="submit" class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">Найти</button>
                         </th>
@@ -65,23 +82,29 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                 @forelse ($users as $user)
-                    @can('update', $user)
-                    <tr class="cursor-pointer hover:bg-gray-50"
-                        @click="openEdit({
-                            id: {{ $user->id }},
-                            name: @js($user->name),
-                            email: @js($user->email),
-                            role: @js($user->getRoleNames()->first())
-                        })">
+                    @php
+                        $canEdit = auth()->user()->can('update', $user);
+                        $roleValue = $user->getRoleNames()->first();
+                        $roleLabel = \App\Enums\RoleName::tryFrom((string) $roleValue)?->label() ?? 'нет роли';
+                    @endphp
+                    <tr @class(['hover:bg-gray-50', 'cursor-pointer' => $canEdit])
+                        @if ($canEdit)
+                            @click="openEdit({
+                                id: {{ $user->id }},
+                                name: {{ \Illuminate\Support\Js::from($user->name) }},
+                                email: {{ \Illuminate\Support\Js::from($user->email) }},
+                                role: {{ \Illuminate\Support\Js::from($roleValue) }}
+                            })"
+                        @endif
+                    >
                         <td class="px-4 py-3 font-medium text-gray-800">{{ $user->name }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ $user->email }}</td>
                         <td class="px-4 py-3">
                             <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                                {{ $user->getRoleNames()->first() ?? 'нет роли' }}
+                                {{ $roleLabel }}
                             </span>
                         </td>
                     </tr>
-                    @endcan
                 @empty
                     <tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Ничего не найдено</td></tr>
                 @endforelse
