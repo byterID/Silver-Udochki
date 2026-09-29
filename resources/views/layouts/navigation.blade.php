@@ -44,6 +44,10 @@
                             </x-dropdown-link>
                         @endcan
 
+                        <x-dropdown-link :href="route('request-info')">
+                            Диагностика
+                        </x-dropdown-link>
+
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -88,6 +92,16 @@
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
+                </x-responsive-nav-link>
+
+                @can('access_control_panel')
+                    <x-responsive-nav-link :href="route('control-panel.index')">
+                        {{ __('Control panel') }}
+                    </x-responsive-nav-link>
+                @endcan
+
+                <x-responsive-nav-link :href="route('request-info')">
+                    Диагностика запроса
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
