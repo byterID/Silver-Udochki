@@ -9,6 +9,7 @@ yarn-error.log
 /storage/*.key
 /storage/pail
 /bootstrap/cache/*.php
+/docker/certbot/
 
 # Переменные окружения: игнорируем все, кроме примера
 .env
