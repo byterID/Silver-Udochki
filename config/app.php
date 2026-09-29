@@ -53,7 +53,6 @@ return [
     */
 
     'url' => env('APP_URL', 'http://localhost'),
-    'debug_token' => env('DEBUG_TOKEN'),
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
