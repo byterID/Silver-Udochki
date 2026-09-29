@@ -10,6 +10,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
 Route::view('/', 'welcome')->name('home');
 
@@ -62,4 +63,19 @@ Route::middleware(['auth', 'verified', 'permission:'.PermissionCode::AccessContr
         });
     });
 
+    Route::get('/debug/headers', function (Request $request) {
+        $token = config('app.debug_token');
+        abort_unless($token && hash_equals($token, (string) $request->query('token')), 404);
+
+        $headers = $request->headers->all();
+        unset($headers['cookie'], $headers['authorization']);
+
+        return response()->json([
+            'laravel_ip'  => $request->ip(),
+            'remote_addr' => $request->server('REMOTE_ADDR'),
+            'is_https'    => $request->isSecure(),
+            'url'         => $request->fullUrl(),
+            'headers'     => $headers,
+        ], 200, [], JSON_PRETTY_PRINT);
+    });
 require __DIR__.'/auth.php';
