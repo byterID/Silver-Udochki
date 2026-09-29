@@ -18,9 +18,7 @@ Route::get('/request-info', RequestInfoController::class)
     ->middleware('throttle:60,1') // не больше 60 запросов в минуту с одного IP
     ->name('request-info');
 
-Route::view('/dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+Route::redirect('/dashboard', '/')->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -16,9 +16,8 @@
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
-            @auth
-                @include('layouts.navigation')
-            @endauth
+            {{-- Шапка для всех: гостю «Войти/Зарегистрироваться», пользователю — аватар и меню --}}
+            @include('layouts.navigation')
 
             <!-- Page Heading -->
             @isset($header)
