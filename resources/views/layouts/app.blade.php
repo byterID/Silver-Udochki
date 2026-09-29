@@ -33,5 +33,10 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- Корзина в руке. В панели управления не нужна --}}
+        @unless (request()->routeIs('control-panel.*'))
+            <x-basket />
+        @endunless
     </body>
 </html>
