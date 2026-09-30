@@ -13,7 +13,7 @@
 }
 .basket-wobble {
     animation: basket-wobble .6s ease;
-    transform-origin: 50% 7%;
+    transform-origin: 50% 22%; /* было 50% 7% */
 }
 
 @keyframes basket-item-drop {
