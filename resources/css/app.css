@@ -37,3 +37,24 @@
         repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 7px),
         linear-gradient(180deg, #5a3a1e 0%, #3b2412 100%);
 }
+
+/* ===== Прилавок и продавец ===== */
+.counter-planks {
+    background-image:
+        repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0 2px, transparent 2px 160px),
+        linear-gradient(180deg, #9a5b2b, #6b3a17 60%, #4a260e);
+}
+
+@keyframes seller-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.seller-idle { animation: seller-breathe 4s ease-in-out infinite; }
+
+@keyframes seller-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+.seller-eyes { transform-box: fill-box; transform-origin: center; animation: seller-blink 5s infinite; }
+
+.seller .mouth-open { opacity: 0; }
+@keyframes seller-mouth { 0% { opacity: 0; } 100% { opacity: 1; } }
+.seller-talking .mouth-open { animation: seller-mouth .22s steps(2, jump-none) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .seller-idle, .seller-eyes, .seller-talking .mouth-open { animation: none; }
+}
