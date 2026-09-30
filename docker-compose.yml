@@ -50,6 +50,14 @@ services:
         networks:
             - internal
 
+    node:
+        image: node:22-alpine
+        working_dir: /app
+        volumes:
+            - .:/app
+        command: sh -c "npm ci && npm run build"
+        profiles: ["tools"]
+        
 volumes:
     db-data:
 
