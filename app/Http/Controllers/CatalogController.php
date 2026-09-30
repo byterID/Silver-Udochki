@@ -10,11 +10,32 @@ use Illuminate\View\View;
 
 class CatalogController extends Controller
 {
-    /** Главная (пока — список разделов; в следующем шаге здесь будет лавка). */
-    public function home(): View
+    /** Главная: лавка с продавцом. */
+    public function home(Request $request): View
     {
+        $user = $request->user();
+
+        // Всё, что нужно продавцу в браузере
+        $front = [
+            'greeting'     => $user ? 'А, '.$user->name.'! Рад снова видеть.' : 'Здравствуй, путник!',
+            'questions'    => config('shop.questions', []),
+            'idle'         => config('shop.idle_replies', []),
+            'promos'       => array_column(config('shop.promos', []), 'title'),
+            'searchUrl'    => route('catalog.search'),
+            'firstChapter' => array_key_first(config('shop.chapters', [])),
+            'options'      => [
+                ['type' => 'link',  'label' => 'Покажи удочки',      'url' => route('catalog.category', 'rods'), 'reply' => 'Пойдём, у меня их целая стойка!'],
+                ['type' => 'link',  'label' => 'Нужна наживка',      'url' => route('catalog.category', 'bait'), 'reply' => 'Свеженькая, утром завезли. Сейчас покажу.'],
+                ['type' => 'book',  'label' => 'Собираюсь на охоту', 'chapter' => 'hunting', 'reply' => 'Открывай каталог, раздел про охоту я заложил.'],
+                ['type' => 'promo', 'label' => 'Что по акциям?'],
+                ['type' => 'idle',  'label' => 'Просто смотрю'],
+            ],
+        ];
+
         return view('welcome', [
+            'front'    => $front,
             'chapters' => $this->chapters(),
+            'promos'   => config('shop.promos', []),
         ]);
     }
 
