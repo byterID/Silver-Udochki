@@ -5,19 +5,32 @@ declare(strict_types=1);
 use App\Enums\PermissionCode;
 use App\Http\Controllers\AccessControlController;
 use App\Http\Controllers\ActionGroupController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ControlPanelController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RequestInfoController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\RequestInfoController;
 
-Route::view('/', 'welcome')->name('home');
+/*
+ * Магазин
+ */
+Route::get('/', [CatalogController::class, 'home'])->name('home');
+
+Route::get('/catalog/{slug}', [CatalogController::class, 'category'])
+    ->where('slug', '[a-z]+')
+    ->name('catalog.category');
+
+Route::get('/search', [CatalogController::class, 'search'])
+    ->middleware('throttle:60,1')
+    ->name('catalog.search');
 
 Route::get('/request-info', RequestInfoController::class)
     ->middleware('throttle:60,1') // не больше 60 запросов в минуту с одного IP
     ->name('request-info');
 
+// Отдельного дашборда нет: после входа и регистрации сразу в лавку.
 Route::redirect('/dashboard', '/')->name('dashboard');
 
 Route::middleware('auth')->group(function () {
