@@ -9,16 +9,15 @@
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600|neucha:400&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
-            @auth
-                @include('layouts.navigation')
-            @endauth
+            {{-- Шапка для всех: гостю «Войти/Зарегистрироваться», пользователю — аватар и меню --}}
+            @include('layouts.navigation')
 
             <!-- Page Heading -->
             @isset($header)
@@ -34,5 +33,10 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- Корзина в руке. В панели управления не нужна --}}
+        @unless (request()->routeIs('control-panel.*'))
+            <x-basket />
+        @endunless
     </body>
 </html>
