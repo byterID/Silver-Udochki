@@ -58,3 +58,264 @@
 @media (prefers-reduced-motion: reduce) {
     .seller-idle, .seller-eyes, .seller-talking .mouth-open { animation: none; }
 }
+
+/* ===== Сцена лавки ===== */
+.shop-page {
+    --nav-h: 4.25rem;   /* шапка: h-16 + border-b-4 */
+    --vh: calc(100dvh - var(--nav-h));
+    --dock-h: 13rem;    /* место под окно диалога снизу */
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #2a1a0e;
+    padding-bottom: 11rem; /* на телефоне: место под корзину */
+}
+.shop-page__backdrop {
+    position: absolute; inset: -40px; z-index: -1;
+    background: url('/images/shop/shop-bg.webp') center / cover no-repeat;
+    filter: blur(24px) brightness(.4) saturate(1.1);
+}
+
+.shop-scene {
+    /* Координаты в % от картинки 1024×572 */
+    --board-x: 10.5%;  --board-y: 15.5%; --board-w: 25%;  --board-h: 11.5%;
+    --seller-x: 36%;  --seller-y: 7.9%; --seller-w: 22%;
+    --seller-tilt: 0deg;
+    --stand-x: 17%;    --stand-y: 44%;   --stand-w: 22%;
+    --bell-x: 80%;     --bell-y: 49%;
+
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1024 / 572;
+    container-type: inline-size;
+    overflow: hidden;
+}
+.shop-scene__bg { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; }
+
+.shop-scene__board {
+    position: absolute;
+    left: var(--board-x); top: var(--board-y);
+    width: var(--board-w); height: var(--board-h);
+    font-size: 1.8cqw;
+    display: none; /* на телефоне доска показывается отдельным блоком */
+}
+.shop-scene__board::before {
+    content: ''; position: absolute; inset: -92% -10% -21% -10%;
+    border-radius: .4rem; pointer-events: none;
+    transition: box-shadow .3s;
+}
+.shop-scene__board.is-flashing::before {
+    box-shadow: 0 0 0 4px #fde047, 0 0 30px 8px rgba(253,224,71,.45);
+}
+.chalk { text-shadow: 0 0 1px rgba(255,255,255,.7), 0 0 8px rgba(255,255,255,.18); }
+.promo-mobile { display: flex; }
+
+.shop-scene__seller {
+    position: absolute;
+    left: var(--seller-x); top: var(--seller-y); width: var(--seller-w);
+    transform: rotate(var(--seller-tilt));
+    transform-origin: 50% 92%;
+}
+
+.shop-scene__bell {
+    position: absolute; left: var(--bell-x); top: var(--bell-y);
+    font-size: max(1.6rem, 3.4cqw); line-height: 1;
+    filter: drop-shadow(0 4px 3px rgba(0,0,0,.45));
+    transition: transform .2s;
+}
+.shop-scene__bell:hover { transform: rotate(-12deg); }
+.shop-scene__bell:active { transform: scale(.9); }
+
+/* Окно диалога */
+.shop-dock { position: relative; z-index: 20; margin: 1.5rem .75rem 0; }
+
+/* Полноэкранный режим: планшет в альбомной ориентации и больше */
+@media (min-width: 768px) and (min-aspect-ratio: 1/1) {
+    .shop-page {
+        height: var(--vh);
+        padding-bottom: 0;
+        /* 1.7902 = 1024/572; 3 = диалог начинается не выше ~60% высоты сцены */
+        --sw: min(
+            max(100vw, var(--vh) * 1.7902),
+            (var(--vh) - var(--dock-h)) * 3,
+            120vw
+        );
+    }
+    .shop-scene {
+        position: absolute; top: 0; left: 50%;
+        width: var(--sw);
+        transform: translateX(-50%);
+        box-shadow: 0 0 60px rgba(0,0,0,.6);
+    }
+    .shop-dock {
+        position: absolute; bottom: .75rem; margin: 0;
+        /* правее таблички каталога (36% сцены) и левее корзины */
+        left: max(1rem, calc((100vw - var(--sw)) / 2 + var(--sw) * .36));
+        right: 12rem;
+    }
+    .shop-scene__board { display: flex; }
+    .promo-mobile { display: none; }
+}
+@media (min-width: 1024px) and (min-aspect-ratio: 1/1) {
+    .shop-dock { right: 16rem; }
+}
+
+/* ===== Табличка «Каталог»: только подсветка, без движения ===== */
+.catalog-stand {
+    position: absolute;
+    left: var(--stand-x); top: var(--stand-y); width: var(--stand-w);
+    aspect-ratio: 1;
+    pointer-events: none;
+}
+.catalog-stand:focus-visible { outline: none; }
+.catalog-stand__body { position: absolute; inset: 0; }
+.catalog-stand__img {
+    width: 100%; height: 100%; display: block; user-select: none;
+    filter: drop-shadow(0 8px 10px rgba(0,0,0,.35));
+    transition: filter .3s ease;
+}
+.catalog-stand__hit {
+    position: absolute; left: 23%; top: 18%; width: 53%; height: 64%;
+    pointer-events: auto; cursor: pointer; border-radius: 8%;
+}
+.catalog-stand__screen {
+    position: absolute; left: 30%; top: 23%; width: 39%; height: 44%;
+    border-radius: 5%;
+    transform: rotate(-2.5deg);
+    overflow: hidden; pointer-events: none;
+    mix-blend-mode: screen;
+    background: radial-gradient(ellipse at 50% 40%, rgba(255,236,180,.6), rgba(255,200,110,.18) 60%, transparent 80%);
+    opacity: 0;
+    animation: stand-hint 6s ease-in-out 2s infinite;
+    transition: opacity .3s, box-shadow .3s;
+}
+.catalog-stand__screen::after {
+    content: ''; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 40%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.6), transparent);
+    transform: skewX(-15deg);
+}
+.catalog-stand:hover .catalog-stand__img,
+.catalog-stand:focus-visible .catalog-stand__img {
+    filter: drop-shadow(0 8px 10px rgba(0,0,0,.35)) drop-shadow(0 0 16px rgba(255,214,140,.65));
+}
+.catalog-stand:hover .catalog-stand__screen,
+.catalog-stand:focus-visible .catalog-stand__screen {
+    animation: none; opacity: 1;
+    box-shadow: 0 0 28px 8px rgba(255,210,120,.55), inset 0 0 22px rgba(255,240,200,.7);
+}
+.catalog-stand:hover .catalog-stand__screen::after,
+.catalog-stand:focus-visible .catalog-stand__screen::after { animation: stand-shine 1.1s ease forwards; }
+
+@keyframes stand-hint { 0%, 80%, 100% { opacity: 0; } 90% { opacity: .45; } }
+@keyframes stand-shine { to { left: 130%; } }
+
+/* ===== Монитор-каталог ===== */
+.pc-bezel {
+    border-radius: 1.75rem; padding: .75rem .75rem .5rem;
+    background: linear-gradient(180deg, #3a3632, #1f1c1a);
+    box-shadow: 0 30px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -2px 0 rgba(0,0,0,.5);
+}
+@media (min-width: 640px) { .pc-bezel { padding: 1.25rem 1.25rem .6rem; } }
+.pc-screen {
+    position: relative; overflow: hidden; border-radius: .75rem;
+    height: min(82vh, 620px);
+    background: #0b0f0d; outline: none;
+    box-shadow: inset 0 0 0 2px #0a0a0a;
+}
+@media (min-width: 640px) { .pc-screen { height: min(68vh, 600px); } }
+.pc-screen__content {
+    background: #f3e7c9; color: #292524;
+    animation: pc-on .55s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes pc-on {
+    0%   { transform: scale(.6, .004); filter: brightness(5); }
+    45%  { transform: scale(1, .004);  filter: brightness(4); }
+    100% { transform: scale(1, 1);     filter: brightness(1); }
+}
+.pc-glare {
+    position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.12) 0%, transparent 30%),
+        repeating-linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px);
+    box-shadow: inset 0 0 60px rgba(0,0,0,.35);
+}
+.pc-neck { width: 6rem; height: 2.25rem; background: linear-gradient(180deg, #2a2724, #171514); clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%); }
+.pc-foot { width: 16rem; height: .75rem; border-radius: .4rem .4rem 1rem 1rem; background: #26231f; box-shadow: 0 12px 24px rgba(0,0,0,.6); }
+
+.pc-ticker__track {
+    display: inline-flex; gap: 3rem; padding-left: 100%; white-space: nowrap;
+    animation: pc-ticker 24s linear infinite;
+}
+@keyframes pc-ticker { to { transform: translateX(-100%); } }
+
+@layer components {
+    .pc-btn {
+        @apply inline-flex items-center justify-center gap-1 rounded-full bg-[#2f4a3a] px-3 py-1.5 text-sm font-semibold text-amber-50 shadow transition hover:bg-[#3d5e4a] active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catalog-stand__screen, .pc-screen__content, .pc-ticker__track { animation: none; }
+    .catalog-stand:hover .catalog-stand__screen::after { animation: none; }
+}
+
+/* ===== Михалыч ===== */
+.mikhalych {
+    /* Глаза и рот в % от картинки 764×1024. Подгонять здесь */
+    --eye-l-x: 42.4%; --eye-r-x: 53.1%; --eye-y: 24.2%;
+    --eye-w: 5.4%;    --eye-h: 2.7%;
+    --mouth-x: 47.6%; --mouth-y: 34.3%; --mouth-w: 6%; --mouth-h: 1.5%;
+    --skin: #e6a27e;  /* кожа вокруг глаз, лучше взять пипеткой */
+    --lash: #2b1d17;  /* у картинки чёрный контур, ресницы под него */
+    position: relative;
+}
+.mikhalych__body {
+    position: relative;
+    transform-origin: 50% 92%;
+    animation: mikhalych-breath 4.2s ease-in-out infinite;
+}
+.mikhalych__img {
+    display: block; width: 100%; height: auto; user-select: none;
+    filter: drop-shadow(0 10px 10px rgba(0,0,0,.35));
+}
+
+/* Веки: сверху вниз на долю секунды */
+.mikhalych__lid {
+    position: absolute; top: var(--eye-y);
+    width: var(--eye-w); height: var(--eye-h);
+    border-radius: 50% 50% 46% 46% / 65% 65% 35% 35%;
+    background: linear-gradient(180deg, var(--skin) 0 60%, color-mix(in srgb, var(--skin), #6b3420 25%) 100%);
+    border-bottom: 2px solid var(--lash);
+    transform: scaleY(0); transform-origin: 50% 0;
+    transition: transform 90ms ease-out;
+}
+.mikhalych__lid--l { left: var(--eye-l-x); }
+.mikhalych__lid--r { left: var(--eye-r-x); }
+.mikhalych__lid.is-closed { transform: scaleY(1); transition: transform 50ms ease-in; }
+
+/* Рот: под верхними зубами открывается щель, улыбка становится шире */
+.mikhalych__mouth {
+    position: absolute;
+    left: var(--mouth-x); top: var(--mouth-y);
+    width: var(--mouth-w); height: var(--mouth-h);
+    border-radius: 15% 15% 50% 50% / 20% 20% 100% 100%;
+    background: radial-gradient(ellipse at 50% 20%, #6e2a22, #2a0d0a 75%);
+    box-shadow: 0 1px 0 #c97a68; /* нижняя губа */
+    transform: scaleY(0); transform-origin: 50% 0;
+}
+.mikhalych.is-talking .mikhalych__mouth {
+    animation: mikhalych-talk .2s ease-in-out infinite alternate;
+}
+
+@keyframes mikhalych-breath {
+    0%, 100% { transform: scale(1, 1); }
+    45%      { transform: scale(1.005, 1.012); }
+}
+@keyframes mikhalych-talk {
+    from { transform: scaleY(.15); }
+    to   { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mikhalych__body, .mikhalych.is-talking .mikhalych__mouth { animation: none; }
+}

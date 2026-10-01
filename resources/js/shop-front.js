@@ -1,14 +1,25 @@
+import { plural } from './promo-board';
+
 export default function registerShopFront(Alpine) {
     Alpine.data('shopFront', (cfg) => ({
         options: cfg.options ?? [],
+        catalog: cfg.catalog ?? { chapters: {}, categories: {} },
+        promoTitles: cfg.promos ?? [],
         shown: '',
         fullText: '',
         typing: false,
         timer: null,
         query: '',
-        bookOpen: false,
-        chapter: cfg.firstChapter ?? 'fishing',
         promoFlash: false,
+
+        // Монитор-каталог
+        catalogOpen: false,
+        chapter: cfg.firstChapter ?? 'fishing',
+        category: null,
+        clock: '',
+        clockTimer: null,
+
+        plural,
 
         init() {
             this.say(`${cfg.greeting} ${this.pickQuestion()}`);
@@ -54,7 +65,6 @@ export default function registerShopFront(Alpine) {
             }, 28);
         },
 
-        /** Клик по реплике: показать её целиком сразу. */
         skip() {
             if (!this.typing) return;
             clearInterval(this.timer);
@@ -74,11 +84,11 @@ export default function registerShopFront(Alpine) {
                     break;
                 case 'book':
                     this.say(opt.reply);
-                    this.openBook(opt.chapter);
+                    this.openCatalog(opt.chapter);
                     break;
                 case 'promo':
-                    this.say(cfg.promos?.length
-                        ? `Сейчас у нас: ${cfg.promos.join('; ')}. Всё на доске у меня за спиной.`
+                    this.say(this.promoTitles.length
+                        ? `Сейчас у нас: ${this.promoTitles.join('; ')}. Всё на доске, вон там, слева.`
                         : 'Акций пока нет, но загляни завтра.');
                     this.flashPromo();
                     break;
@@ -87,10 +97,55 @@ export default function registerShopFront(Alpine) {
             }
         },
 
-        openBook(chapter = null) {
-            if (chapter) this.chapter = chapter;
-            this.bookOpen = true;
+        /* ---------- Монитор-каталог ---------- */
+
+        get chapterCategories() {
+            return (this.catalog.chapters[this.chapter]?.categories ?? [])
+                .map((slug) => ({ slug, ...this.catalog.categories[slug] }));
         },
+
+        get currentCategory() {
+            return this.category ? this.catalog.categories[this.category] ?? null : null;
+        },
+
+        openCatalog(chapter = null) {
+            if (chapter) this.chapter = chapter;
+            this.category = null;
+            this.catalogOpen = true;
+            this.tickClock();
+            clearInterval(this.clockTimer);
+            this.clockTimer = setInterval(() => this.tickClock(), 15000);
+            document.body.classList.add('overflow-hidden');
+            this.$nextTick(() => this.$refs.pcScreen?.focus({ preventScroll: true }));
+        },
+
+        // Старое имя, чтобы ничего не сломалось
+        openBook(chapter = null) {
+            this.openCatalog(chapter);
+        },
+
+        closeCatalog() {
+            this.catalogOpen = false;
+            clearInterval(this.clockTimer);
+            document.body.classList.remove('overflow-hidden');
+            this.$nextTick(() => this.$refs.catalogStand?.focus({ preventScroll: true }));
+        },
+
+        pickChapter(key) {
+            this.chapter = key;
+            this.category = null;
+        },
+
+        pickCategory(slug) {
+            this.category = slug;
+            this.$refs.pcMain?.scrollTo({ top: 0 });
+        },
+
+        tickClock() {
+            this.clock = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date());
+        },
+
+        /* ---------- Прочее ---------- */
 
         flashPromo() {
             this.promoFlash = true;
@@ -101,7 +156,6 @@ export default function registerShopFront(Alpine) {
             this.say(this.pickQuestion());
         },
 
-        /** Свой ответ продавцу = поиск по сайту. */
         submit() {
             const q = this.query.trim();
             if (!q) {
@@ -116,8 +170,11 @@ export default function registerShopFront(Alpine) {
 
         /** Клавиши 1–5 выбирают ответ, Esc закрывает каталог. */
         hotkey(e) {
-            if (e.key === 'Escape') { this.bookOpen = false; return; }
-            if (this.bookOpen || e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key === 'Escape') {
+                if (this.catalogOpen) this.closeCatalog();
+                return;
+            }
+            if (this.catalogOpen || e.ctrlKey || e.metaKey || e.altKey) return;
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
             const n = Number(e.key);
