@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Illuminate\Support\Carbon;
 
 class CatalogController extends Controller
 {
@@ -14,30 +15,83 @@ class CatalogController extends Controller
     public function home(Request $request): View
     {
         $user = $request->user();
+        $promos = $this->activePromos();
 
-        // Всё, что нужно продавцу в браузере
         $front = [
             'greeting'     => $user ? 'А, '.$user->name.'! Рад снова видеть.' : 'Здравствуй, путник!',
             'questions'    => config('shop.questions', []),
             'idle'         => config('shop.idle_replies', []),
-            'promos'       => array_column(config('shop.promos', []), 'title'),
+            'promos'       => array_column($promos, 'title'),
             'searchUrl'    => route('catalog.search'),
             'firstChapter' => array_key_first(config('shop.chapters', [])),
+            'catalog'      => $this->catalogData(),
             'options'      => [
                 ['type' => 'link',  'label' => 'Покажи удочки',      'url' => route('catalog.category', 'rods'), 'reply' => 'Пойдём, у меня их целая стойка!'],
                 ['type' => 'link',  'label' => 'Нужна наживка',      'url' => route('catalog.category', 'bait'), 'reply' => 'Свеженькая, утром завезли. Сейчас покажу.'],
-                ['type' => 'book',  'label' => 'Собираюсь на охоту', 'chapter' => 'hunting', 'reply' => 'Открывай каталог, раздел про охоту я заложил.'],
+                ['type' => 'book',  'label' => 'Собираюсь на охоту', 'chapter' => 'hunting', 'reply' => 'Глянь на экран, раздел про охоту я открыл.'],
                 ['type' => 'promo', 'label' => 'Что по акциям?'],
                 ['type' => 'idle',  'label' => 'Просто смотрю'],
             ],
         ];
 
-        return view('welcome', [
-            'front'    => $front,
-            'chapters' => $this->chapters(),
-            'promos'   => config('shop.promos', []),
-        ]);
+        return view('welcome', compact('front', 'promos'));
     }
+
+    /** Только акции, которые действуют прямо сейчас. ends — метка в мс для таймера в браузере. */
+    private function activePromos(): array
+    {
+        $now = now();
+
+        return collect(config('shop.promos', []))
+            ->filter(function (array $p) use ($now): bool {
+                $starts = isset($p['starts_at']) ? Carbon::parse($p['starts_at']) : null;
+                $ends   = isset($p['ends_at']) ? Carbon::parse($p['ends_at']) : null;
+
+                return (! $starts || $starts->lte($now)) && (! $ends || $ends->gt($now));
+            })
+            ->map(fn (array $p) => [
+                'title' => $p['title'],
+                'note'  => $p['note'] ?? null,
+                'ends'  => isset($p['ends_at']) ? Carbon::parse($p['ends_at'])->getTimestampMs() : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** Данные для «монитора»: главы, категории и товары внутри них. */
+    private function catalogData(): array
+    {
+        $categories = config('shop.categories', []);
+        $products = collect(config('shop.products', []))->groupBy('category');
+
+        return [
+            'chapters' => collect(config('shop.chapters', []))
+                ->map(fn (array $c) => [
+                    'title'      => $c['title'],
+                    'icon'       => $c['icon'],
+                    'categories' => array_values(array_filter($c['categories'], fn (string $s) => isset($categories[$s]))),
+                ])
+                ->all(),
+            'categories' => collect($categories)
+                ->map(fn (array $c, string $slug) => [
+                    'title'       => $c['title'],
+                    'icon'        => $c['icon'],
+                    'description' => $c['description'],
+                    'url'         => route('catalog.category', $slug),
+                    'products'    => $products->get($slug, collect())
+                        ->map(fn (array $p) => [
+                            'id'    => $p['id'],
+                            'name'  => $p['name'],
+                            'price' => $p['price'],
+                            'icon'  => $p['icon'],
+                        ])
+                        ->values()
+                        ->all(),
+                ])
+                ->all(),
+        ];
+    }
+
 
     public function category(string $slug): View
     {
