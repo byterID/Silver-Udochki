@@ -1,0 +1,7 @@
+# Локальный запуск: только http на 8080, без SSL
+services:
+  web:
+    ports: !override
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
