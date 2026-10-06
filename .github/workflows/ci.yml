@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   tests:
@@ -32,7 +32,7 @@ jobs:
           --health-retries 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -45,7 +45,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Настроить Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -82,8 +82,64 @@ jobs:
           DB_USERNAME: testing
           DB_PASSWORD: testing
 
+      - name: Собрать Docker-образ
+        run: docker build --target runtime -t silver-udochki-app .
+
+      - name: Проверить, что Tailwind отработал в образе
+        run: |
+          docker run --rm --entrypoint sh silver-udochki-app \
+            -c '! grep -q "@tailwind" /var/www/public/build/assets/*.css'
+
       - name: Проверить утечки секретов
         run: |
           curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
             | tar -xz -C /tmp gitleaks
           /tmp/gitleaks git --redact --verbose --no-banner
+
+  deploy:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://silver-udochki.ru
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Настроить SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Деплой
+        env:
+          TARGET: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" 'bash -s' <<'EOF'
+          set -euo pipefail
+          cd /home/lfeanite/apps/silver-udochki
+
+          git fetch origin main
+          git checkout main
+          git merge --ff-only origin/main
+
+          # Бэкап базы перед миграциями, храним 14 дней
+          mkdir -p ~/backups
+          docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+            | gzip > ~/backups/db_$(date +%F_%H%M).sql.gz
+          find ~/backups -name 'db_*.sql.gz' -mtime +14 -delete
+
+          docker compose up -d --build
+          docker compose exec -T app php artisan migrate --force
+          docker image prune -f
+          EOF
+
+      - name: Проверить, что сайт отвечает
+        run: curl -fsS --retry 5 --retry-delay 5 -o /dev/null https://silver-udochki.ru
