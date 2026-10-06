@@ -23,7 +23,8 @@ class VerifyEmailController extends Controller
         }
 
         if ($user->markEmailAsVerified()) {
-            event(new Verified($user));
+            // Подтверждение email отключено (см. User.php). Убрать, когда User снова будет implements MustVerifyEmail.
+            event(new Verified($user)); // @phpstan-ignore argument.type
         }
 
         return redirect()->intended(route('dashboard', absolute: false).'?verified=1');

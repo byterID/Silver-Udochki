@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY vite.config.js tailwind.config.js ./
+COPY vite.config.js tailwind.config.js postcss.config.js ./
 COPY resources ./resources
 RUN npm run build
 
@@ -69,3 +69,13 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 EXPOSE 9000
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
+
+# ---------- Этап 5: nginx со статикой ----------
+FROM nginx:stable-alpine AS web
+
+# public/ (включая собранный build/) берём из рантайм-образа
+COPY --from=runtime /var/www/public /var/www/public
+
+# аналог php artisan storage:link: ссылка на загрузки,
+# сами файлы придут через общий том
+RUN ln -sfn ../storage/app/public /var/www/public/storage
