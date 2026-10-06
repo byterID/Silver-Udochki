@@ -124,7 +124,7 @@ jobs:
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" 'bash -s' <<'EOF'
           set -euo pipefail
-          cd /apps/silver-udochki
+          cd /home/lfeanite/apps/silver-udochki
 
           git fetch origin main
           git checkout main
