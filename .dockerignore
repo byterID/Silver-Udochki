@@ -11,6 +11,7 @@ storage/framework/sessions/*
 storage/framework/views/*
 public/build
 public/hot
+public/storage
 .env
 .env.*
 !.env.example
@@ -21,3 +22,4 @@ docker-compose*.yml
 Dockerfile
 .dockerignore
 docker/certbot
+bootstrap/cache/*.php
