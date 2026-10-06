@@ -132,13 +132,14 @@ jobs:
 
           # Бэкап базы перед миграциями, храним 14 дней
           mkdir -p ~/backups
-          docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+          docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' < /dev/null \
             | gzip > ~/backups/db_$(date +%F_%H%M).sql.gz
           find ~/backups -name 'db_*.sql.gz' -mtime +14 -delete
 
           docker compose up -d --build
-          docker compose exec -T app php artisan migrate --force
+          docker compose exec -T app php artisan migrate --force < /dev/null
           docker image prune -f
+          echo "Деплой завершён"
           EOF
 
       - name: Проверить, что сайт отвечает
