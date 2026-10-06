@@ -25,12 +25,12 @@ class RequestInfoController extends Controller
 
     /** Заголовки, которые обычно ставят прокси. Показываем, есть ли они. */
     private const PROXY_HEADERS = [
-        'x-forwarded-for'   => 'Настоящий IP клиента (по словам прокси)',
+        'x-forwarded-for' => 'Настоящий IP клиента (по словам прокси)',
         'x-forwarded-proto' => 'Схема, по которой клиент пришёл к прокси',
-        'x-forwarded-host'  => 'Домен, который запросил клиент',
-        'x-forwarded-port'  => 'Порт, на который пришёл клиент',
-        'x-real-ip'         => 'Настоящий IP клиента (вариант nginx)',
-        'forwarded'         => 'Стандартный (RFC 7239) вариант всего вышеперечисленного',
+        'x-forwarded-host' => 'Домен, который запросил клиент',
+        'x-forwarded-port' => 'Порт, на который пришёл клиент',
+        'x-real-ip' => 'Настоящий IP клиента (вариант nginx)',
+        'forwarded' => 'Стандартный (RFC 7239) вариант всего вышеперечисленного',
     ];
 
     /**
@@ -38,15 +38,15 @@ class RequestInfoController extends Controller
      * Строго по списку: весь $_SERVER выводить нельзя, там значения из .env.
      */
     private const NGINX_PARAMS = [
-        'REMOTE_ADDR'       => 'IP того, кто подключился к nginx',
-        'REMOTE_PORT'       => 'Порт на стороне подключившегося',
-        'SERVER_NAME'       => 'Имя из server_name в конфиге nginx',
-        'SERVER_PORT'       => 'Порт, на который пришёл запрос',
-        'HTTPS'             => '«on», если nginx расшифровал HTTPS',
-        'REQUEST_SCHEME'    => 'Схема: http или https',
-        'SERVER_PROTOCOL'   => 'Версия HTTP между браузером и nginx',
-        'REQUEST_METHOD'    => 'Метод запроса',
-        'REQUEST_URI'       => 'Запрошенный путь',
+        'REMOTE_ADDR' => 'IP того, кто подключился к nginx',
+        'REMOTE_PORT' => 'Порт на стороне подключившегося',
+        'SERVER_NAME' => 'Имя из server_name в конфиге nginx',
+        'SERVER_PORT' => 'Порт, на который пришёл запрос',
+        'HTTPS' => '«on», если nginx расшифровал HTTPS',
+        'REQUEST_SCHEME' => 'Схема: http или https',
+        'SERVER_PROTOCOL' => 'Версия HTTP между браузером и nginx',
+        'REQUEST_METHOD' => 'Метод запроса',
+        'REQUEST_URI' => 'Запрошенный путь',
         'GATEWAY_INTERFACE' => 'Протокол связи nginx → PHP (FastCGI)',
     ];
 
@@ -59,27 +59,27 @@ class RequestInfoController extends Controller
             [
                 'label' => 'IP посетителя (по мнению Laravel)',
                 'value' => $request->ip(),
-                'hint'  => 'Этот IP используется в логах и лимитах запросов',
+                'hint' => 'Этот IP используется в логах и лимитах запросов',
             ],
             [
                 'label' => 'Кто подключился напрямую (REMOTE_ADDR)',
                 'value' => $request->server('REMOTE_ADDR'),
-                'hint'  => 'Прокси нет, поэтому должен совпадать со строкой выше',
+                'hint' => 'Прокси нет, поэтому должен совпадать со строкой выше',
             ],
             [
                 'label' => 'Laravel поверил прокси-заголовкам',
                 'value' => $request->isFromTrustedProxy() ? 'да' : 'нет',
-                'hint'  => 'Должно быть «нет»: доверять некому',
+                'hint' => 'Должно быть «нет»: доверять некому',
             ],
             [
                 'label' => 'HTTPS',
                 'value' => $request->isSecure() ? 'да' : 'нет',
-                'hint'  => 'nginx сам расшифровал соединение и сообщил PHP',
+                'hint' => 'nginx сам расшифровал соединение и сообщил PHP',
             ],
             [
                 'label' => 'Домен (Host)',
                 'value' => $request->getHost(),
-                'hint'  => 'Чужие домены отсекаются ещё в nginx',
+                'hint' => 'Чужие домены отсекаются ещё в nginx',
             ],
         ];
 
