@@ -71,6 +71,74 @@ services:
             - .:/app
         command: sh -c "npm ci && npm run build"
         profiles: ["tools"]
+
+        # ---------- Мониторинг ----------
+    node-exporter:
+        image: prom/node-exporter:v1.9.1
+        container_name: silver-udochki-node-exporter
+        restart: unless-stopped
+        network_mode: host          # видим реальную сеть хоста
+        pid: host                   # видим реальные процессы хоста
+        volumes:
+            - /:/host:ro,rslave
+        command:
+            - --path.rootfs=/host
+            - --web.listen-address=${MONITORING_BIND_IP:?укажите MONITORING_BIND_IP в .env}:9100
+        security_opt:
+            - no-new-privileges:true
+        logging: *logging
+
+    cadvisor:
+        image: gcr.io/cadvisor/cadvisor:v0.52.1
+        container_name: silver-udochki-cadvisor
+        restart: unless-stopped
+        privileged: true
+        devices:
+            - /dev/kmsg
+        volumes:
+            - /:/rootfs:ro
+            - /var/run:/var/run:ro
+            - /sys:/sys:ro
+            - /var/lib/docker/:/var/lib/docker:ro
+            - /dev/disk/:/dev/disk:ro
+        command:
+            - --docker_only=true
+            - --housekeeping_interval=30s
+            - --store_container_labels=false
+        ports:
+            - "${MONITORING_BIND_IP:?}:8081:8080"
+        logging: *logging
+
+    postgres-exporter:
+        image: prometheuscommunity/postgres-exporter:v0.17.1
+        container_name: silver-udochki-postgres-exporter
+        restart: unless-stopped
+        environment:
+            DATA_SOURCE_URI: "db:5432/${DB_DATABASE}?sslmode=disable"
+            DATA_SOURCE_USER: monitoring
+            DATA_SOURCE_PASS: "${MONITORING_DB_PASSWORD:?укажите MONITORING_DB_PASSWORD в .env}"
+        ports:
+            - "${MONITORING_BIND_IP:?}:9187:9187"
+        depends_on:
+            db:
+                condition: service_healthy
+        security_opt:
+            - no-new-privileges:true
+        logging: *logging
+
+    nginx-exporter:
+        image: nginx/nginx-prometheus-exporter:1.4.2
+        container_name: silver-udochki-nginx-exporter
+        restart: unless-stopped
+        command:
+            - --nginx.scrape-uri=http://web:8080/stub_status
+        ports:
+            - "${MONITORING_BIND_IP:?}:9113:9113"
+        depends_on:
+            - web
+        security_opt:
+            - no-new-privileges:true
+        logging: *logging
         
 volumes:
     app-storage:
