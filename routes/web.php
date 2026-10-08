@@ -7,12 +7,35 @@ use App\Http\Controllers\AccessControlController;
 use App\Http\Controllers\ActionGroupController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ControlPanelController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RequestInfoController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
+/*
+ * Задачи
+ */
+Route::middleware('auth')->group(function () {
+    Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->middleware('throttle:5,1,tasks-store')->name('store');
+
+        Route::middleware('can:view,task')->group(function () {
+            Route::get('/{task}', 'show')->name('show');
+            Route::get('/{task}/status', 'status')->middleware('throttle:120,1,tasks-status')->name('status');
+            Route::get('/{task}/download', 'download')->middleware('throttle:30,1,tasks-download')->name('download');
+        });
+    });
+
+    Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
+        Route::get('/', 'index')->middleware('throttle:60,1,notifications')->name('index');
+        Route::post('/read-all', 'readAll')->name('read-all');
+        Route::post('/{id}/read', 'read')->name('read');
+    });
+});
 /*
  * Магазин
  */
