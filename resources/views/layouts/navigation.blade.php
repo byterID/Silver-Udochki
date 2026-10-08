@@ -26,6 +26,8 @@
             {{-- Справа (планшет и ПК) --}}
             <div class="hidden items-center gap-3 sm:flex">
                 @auth
+                    <x-notification-bell />
+
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
                             <x-header-button class="!pl-1">
@@ -38,6 +40,10 @@
                         </x-slot>
 
                         <x-slot name="content">
+                            <x-dropdown-link :href="route('tasks.index')">
+                                Мои задачи
+                            </x-dropdown-link>
+
                             <x-dropdown-link :href="route('profile.edit')">
                                 {{ __('Profile') }}
                             </x-dropdown-link>
@@ -93,6 +99,10 @@
             </div>
 
             <div class="grid gap-2">
+                <x-header-button :href="route('tasks.index')" class="w-full justify-center">
+                    Мои задачи
+                </x-header-button>
+
                 <x-header-button :href="route('profile.edit')" class="w-full justify-center">
                     {{ __('Profile') }}
                 </x-header-button>

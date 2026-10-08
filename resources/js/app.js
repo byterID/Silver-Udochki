@@ -4,13 +4,15 @@ import registerCart from './cart';
 import registerShopFront from './shop-front';
 import registerPromoBoard from './promo-board';
 import registerSeller from './seller';
+import { taskStatus, notificationBell } from './tasks';
 
 Alpine.plugin(collapse);
 registerCart(Alpine);
 registerShopFront(Alpine);
 registerPromoBoard(Alpine);
 registerSeller(Alpine);
+Alpine.data('taskStatus', taskStatus);
+Alpine.data('notificationBell', notificationBell);
 
 window.Alpine = Alpine;
-
 Alpine.start();
