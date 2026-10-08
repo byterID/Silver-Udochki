@@ -72,76 +72,113 @@ services:
         command: sh -c "npm ci && npm run build"
         profiles: ["tools"]
 
-        # ---------- Мониторинг ----------
-    node-exporter:
-        image: prom/node-exporter:v1.9.1
-        container_name: silver-udochki-node-exporter
-        restart: unless-stopped
-        network_mode: host          # видим реальную сеть хоста
-        pid: host                   # видим реальные процессы хоста
+    kafka-init:
+        image: busybox:1.37
+        command: ["chown", "-R", "1000:1000", "/var/lib/kafka/data"]
         volumes:
-            - /:/host:ro,rslave
-        command:
-            - --path.rootfs=/host
-            - --web.listen-address=${MONITORING_BIND_IP:?укажите MONITORING_BIND_IP в .env}:9100
+            - kafka-data:/var/lib/kafka/data
+        restart: "no"
+
+    kafka:
+        image: apache/kafka:4.1.0
+        container_name: silver-udochki-kafka
+        restart: unless-stopped
+        environment:
+            KAFKA_NODE_ID: 1
+            KAFKA_PROCESS_ROLES: broker,controller
+            KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+            KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+            KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+            KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+            KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+            KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+            KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+            KAFKA_LOG_RETENTION_HOURS: 168
+            KAFKA_LOG_DIRS: /var/lib/kafka/data
+            KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"
+        volumes:
+            - kafka-data:/var/lib/kafka/data
+        mem_limit: 700m
+        # портов наружу НЕТ: доступ только из docker-сети
         security_opt:
             - no-new-privileges:true
         logging: *logging
+        depends_on:
+            kafka-init:
+                condition: service_completed_successfully
 
-    cadvisor:
-        image: ghcr.io/google/cadvisor:v0.60.6
-        container_name: silver-udochki-cadvisor
+    task-worker:
+        build:
+            context: .
+            target: runtime
         restart: unless-stopped
-        privileged: true
-        devices:
-            - /dev/kmsg
-        volumes:
-            - /:/rootfs:ro
-            - /var/run:/var/run:ro
-            - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
-            - /sys:/sys:ro
-            - /var/lib/docker/:/var/lib/docker:ro
-            - /dev/disk/:/dev/disk:ro
-        command:
-            - --docker_only=true
-            - --housekeeping_interval=30s
-            - --store_container_labels=false
-            - --containerd-namespace=moby
-        ports:
-            - "${MONITORING_BIND_IP:?}:8081:8080"
-        logging: *logging
-
-    postgres-exporter:
-        image: prometheuscommunity/postgres-exporter:v0.17.1
-        container_name: silver-udochki-postgres-exporter
-        restart: unless-stopped
+        command: ["php", "artisan", "tasks:consume"]
         environment:
-            DATA_SOURCE_URI: "db:5432/${DB_DATABASE}?sslmode=disable"
-            DATA_SOURCE_USER: monitoring
-            DATA_SOURCE_PASS: "${MONITORING_DB_PASSWORD:?укажите MONITORING_DB_PASSWORD в .env}"
-        ports:
-            - "${MONITORING_BIND_IP:?}:9187:9187"
+            RUN_MIGRATIONS: "false"
+        volumes:
+            - ./.env:/var/www/.env:ro
+            - app-storage:/var/www/storage/app
         depends_on:
             db:
                 condition: service_healthy
+            kafka:
+                condition: service_started
+        stop_grace_period: 90s
+        mem_limit: 256m
         security_opt:
             - no-new-privileges:true
         logging: *logging
+        user: www-data
 
-    nginx-exporter:
-        image: nginx/nginx-prometheus-exporter:1.4.2
-        container_name: silver-udochki-nginx-exporter
+    scheduler:
+        build:
+            context: .
+            target: runtime
+        container_name: silver-udochki-scheduler
         restart: unless-stopped
-        command:
-            - --nginx.scrape-uri=http://web:8080/stub_status
-        ports:
-            - "${MONITORING_BIND_IP:?}:9113:9113"
+        command: ["php", "artisan", "schedule:work"]
+        environment:
+            RUN_MIGRATIONS: "false"
+        volumes:
+            - ./.env:/var/www/.env:ro
+            - app-storage:/var/www/storage/app
         depends_on:
-            - web
+            db:
+                condition: service_healthy
+            kafka:
+                condition: service_started
+        mem_limit: 128m
         security_opt:
             - no-new-privileges:true
         logging: *logging
-        
+        user: www-data
+
+    task-notifier:
+        build:
+            context: .
+            target: runtime
+        container_name: silver-udochki-task-notifier
+        restart: unless-stopped
+        command: ["php", "artisan", "tasks:notify"]
+        environment:
+            RUN_MIGRATIONS: "false"
+        volumes:
+            - ./.env:/var/www/.env:ro
+        depends_on:
+            db:
+                condition: service_healthy
+            kafka:
+                condition: service_started
+        mem_limit: 128m
+        security_opt:
+            - no-new-privileges:true
+        logging: *logging
+        user: www-data
+
 volumes:
     app-storage:
     db-data:
+    kafka-data:
