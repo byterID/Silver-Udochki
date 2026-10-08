@@ -40,7 +40,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_pgsql, intl
+          extensions: pdo_pgsql, intl, rdkafka, pcntl
           coverage: none
           ini-values: memory_limit=1G
 
@@ -82,6 +82,16 @@ jobs:
           DB_USERNAME: testing
           DB_PASSWORD: testing
 
+      - name: Проверка docker-compose
+        env:
+          COMPOSE_FILE: docker-compose.yml:docker-compose.monitoring.yml
+          MONITORING_BIND_IP: 127.0.0.1
+          MONITORING_DB_PASSWORD: ci-dummy
+          DB_PASSWORD: ci-dummy
+        run: docker compose config --quiet
+
+      - name: Проверить shell-скрипты
+        run: shellcheck --severity=warning docker/entrypoint.sh docker/kafka/create-topics.sh
       - name: Собрать Docker-образ
         run: docker build --target runtime -t silver-udochki-app .
 
@@ -130,14 +140,48 @@ jobs:
           git checkout main
           git merge --ff-only origin/main
 
+          # Без COMPOSE_FILE Compose не увидит docker-compose.monitoring.yml,
+          # и --remove-orphans ниже удалит экспортеры как «лишние» контейнеры.
+          if ! grep -q '^COMPOSE_FILE=' .env; then
+            echo "В .env нет COMPOSE_FILE — сначала прогоните Ansible" >&2
+            exit 1
+          fi
+
           # Бэкап базы перед миграциями, храним 14 дней
           mkdir -p ~/backups
           docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' < /dev/null \
             | gzip > ~/backups/db_$(date +%F_%H%M).sql.gz
           find ~/backups -name 'db_*.sql.gz' -mtime +14 -delete
 
-          docker compose up -d --build
-          docker compose exec -T app php artisan migrate --force < /dev/null
+          # 1. Собрать новые образы. Работающие контейнеры пока не трогаем:
+          #    сайт продолжает работать на старом коде.
+          docker compose build
+
+          # 2. Сначала зависимости. kafka-init (chown volume) запустится сам через depends_on.
+          docker compose up -d db kafka
+
+          # 3. Топики до воркеров. Скрипт сам ждёт, пока Kafka ответит.
+          sh docker/kafka/create-topics.sh < /dev/null
+
+          # 4. Миграции в разовом контейнере из НОВОГО образа.
+          #    -T — без псевдотерминала (его нет в SSH без tty),
+          #    --no-deps — db уже запущена, ничего лишнего не поднимать,
+          #    --rm — удалить контейнер после выполнения.
+          docker compose run --rm -T --no-deps app php artisan migrate --force < /dev/null
+
+          # 5. Перезапустить всё на новом коде. Старый воркер получит SIGTERM,
+          #    доделает задачу (stop_grace_period: 90s) и уступит место новому.
+          docker compose up -d --remove-orphans
+
+          # 6. Через 20 с убедиться, что никто не уходит в рестарты.
+          sleep 20
+          if [ -n "$(docker compose ps --status restarting -q)" ]; then
+            echo "Есть контейнеры в рестарт-цикле:" >&2
+            docker compose ps
+            docker compose logs --tail 50 task-worker task-notifier scheduler
+            exit 1
+          fi
+
           docker image prune -f
           echo "Деплой завершён"
           EOF
