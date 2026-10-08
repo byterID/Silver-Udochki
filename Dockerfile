@@ -16,10 +16,12 @@ RUN npm run build
 # одна и та же версия PHP и один набор расширений в обоих случаях.
 FROM php:8.4-fpm-alpine AS base
 
-RUN apk add --no-cache postgresql-libs icu-libs \
+RUN apk add --no-cache postgresql-libs icu-libs librdkafka \
     && apk add --no-cache --virtual .build-deps \
-        postgresql-dev icu-dev $PHPIZE_DEPS \
-    && docker-php-ext-install -j"$(nproc)" pdo_pgsql intl opcache \
+        postgresql-dev icu-dev librdkafka-dev $PHPIZE_DEPS \
+    && docker-php-ext-install -j"$(nproc)" pdo_pgsql intl opcache pcntl \
+    && pecl install rdkafka \
+    && docker-php-ext-enable rdkafka \
     && apk del .build-deps
 
 WORKDIR /var/www
