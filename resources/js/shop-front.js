@@ -1,9 +1,6 @@
-import { plural } from './promo-board';
-
 export default function registerShopFront(Alpine) {
     Alpine.data('shopFront', (cfg) => ({
         options: cfg.options ?? [],
-        catalog: cfg.catalog ?? { chapters: {}, categories: {} },
         promoTitles: cfg.promos ?? [],
         shown: '',
         fullText: '',
@@ -11,15 +8,6 @@ export default function registerShopFront(Alpine) {
         timer: null,
         query: '',
         promoFlash: false,
-
-        // Монитор-каталог
-        catalogOpen: false,
-        chapter: cfg.firstChapter ?? 'fishing',
-        category: null,
-        clock: '',
-        clockTimer: null,
-
-        plural,
 
         init() {
             this.say(`${cfg.greeting} ${this.pickQuestion()}`);
@@ -97,52 +85,18 @@ export default function registerShopFront(Alpine) {
             }
         },
 
-        /* ---------- Монитор-каталог ---------- */
-
-        get chapterCategories() {
-            return (this.catalog.chapters[this.chapter]?.categories ?? [])
-                .map((slug) => ({ slug, ...this.catalog.categories[slug] }));
-        },
-
-        get currentCategory() {
-            return this.category ? this.catalog.categories[this.category] ?? null : null;
-        },
+        /* ---------- Монитор-каталог (живёт в layouts/app) ---------- */
 
         openCatalog(chapter = null) {
-            if (chapter) this.chapter = chapter;
-            this.category = null;
-            this.catalogOpen = true;
-            this.tickClock();
-            clearInterval(this.clockTimer);
-            this.clockTimer = setInterval(() => this.tickClock(), 15000);
-            document.body.classList.add('overflow-hidden');
-            this.$nextTick(() => this.$refs.pcScreen?.focus({ preventScroll: true }));
+            this.$dispatch('catalog-open', {
+                chapter,
+                from: this.$refs.catalogStand ?? null,
+            });
         },
 
         // Старое имя, чтобы ничего не сломалось
         openBook(chapter = null) {
             this.openCatalog(chapter);
-        },
-
-        closeCatalog() {
-            this.catalogOpen = false;
-            clearInterval(this.clockTimer);
-            document.body.classList.remove('overflow-hidden');
-            this.$nextTick(() => this.$refs.catalogStand?.focus({ preventScroll: true }));
-        },
-
-        pickChapter(key) {
-            this.chapter = key;
-            this.category = null;
-        },
-
-        pickCategory(slug) {
-            this.category = slug;
-            this.$refs.pcMain?.scrollTo({ top: 0 });
-        },
-
-        tickClock() {
-            this.clock = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date());
         },
 
         /* ---------- Прочее ---------- */
@@ -168,13 +122,9 @@ export default function registerShopFront(Alpine) {
             }, 800);
         },
 
-        /** Клавиши 1–5 выбирают ответ, Esc закрывает каталог. */
+        /** Клавиши 1–5 выбирают ответ. Esc обрабатывает сам монитор. */
         hotkey(e) {
-            if (e.key === 'Escape') {
-                if (this.catalogOpen) this.closeCatalog();
-                return;
-            }
-            if (this.catalogOpen || e.ctrlKey || e.metaKey || e.altKey) return;
+            if (this.$store.catalogMonitor.open || e.ctrlKey || e.metaKey || e.altKey) return;
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
             const n = Number(e.key);

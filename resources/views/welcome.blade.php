@@ -77,8 +77,6 @@
                     </form>
                 </div>
             </div>
-
-            @include('shop.partials.catalog-monitor')
         </div>
     </section>
 </x-app-layout>

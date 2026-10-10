@@ -218,20 +218,64 @@
 @media (min-width: 640px) { .pc-bezel { padding: 1.25rem 1.25rem .6rem; } }
 .pc-screen {
     position: relative; overflow: hidden; border-radius: .75rem;
-    height: min(82vh, 620px);
+    /* телефон: весь экран минус поля оверлея, рамка и подпись */
+    height: calc(100vh - 4.5rem);
+    height: calc(100dvh - 4.5rem);
     background: #0b0f0d; outline: none;
     box-shadow: inset 0 0 0 2px #0a0a0a;
 }
-@media (min-width: 640px) { .pc-screen { height: min(68vh, 600px); } }
-.pc-screen__content {
-    background: #f3e7c9; color: #292524;
-    animation: pc-on .55s cubic-bezier(.2,.8,.2,1) both;
+/* ПК: ещё минус ножка и подставка монитора */
+@media (min-width: 640px) {
+    .pc-screen {
+        height: min(calc(100vh - 10rem), 900px);
+        height: min(calc(100dvh - 10rem), 900px);
+    }
 }
-@keyframes pc-on {
-    0%   { transform: scale(.6, .004); filter: brightness(5); }
-    45%  { transform: scale(1, .004);  filter: brightness(4); }
-    100% { transform: scale(1, 1);     filter: brightness(1); }
+
+.pc-screen__content { background: #f3e7c9; color: #292524; }
+
+/* ===== Включение монитора =====
+   Без .is-lit монитор прозрачный, а экран закрыт шторкой — так выглядит первый кадр.
+   Переход берётся из целевого состояния:
+   открытие — монитор 200 мс, потом шторка уходит за 450 мс;
+   закрытие — шторка 120 мс, потом монитор исчезает за 160 мс (CLOSE_MS в catalog-monitor.js). */
+.catalog-monitor__backdrop {
+    opacity: 0;
+    transition: opacity .16s ease-in .12s;
 }
+.catalog-monitor__unit {
+    opacity: 0;
+    transform: scale(.97);
+    transition: opacity .16s ease-in .12s, transform .16s ease-in .12s;
+}
+.pc-screen__shade {
+    position: absolute; inset: 0;
+    background: #0b0f0d;
+    opacity: 1;
+    pointer-events: none;
+    transition: opacity .12s ease-in;
+}
+
+.catalog-monitor.is-lit .catalog-monitor__backdrop {
+    opacity: 1;
+    transition: opacity .2s ease-out;
+}
+.catalog-monitor.is-lit .catalog-monitor__unit {
+    opacity: 1;
+    transform: none;
+    transition: opacity .2s ease-out, transform .2s cubic-bezier(.2,.7,.3,1);
+}
+.catalog-monitor.is-lit .pc-screen__shade {
+    opacity: 0;
+    transition: opacity .45s cubic-bezier(.4,0,.2,1) .2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catalog-monitor__backdrop,
+    .catalog-monitor__unit,
+    .pc-screen__shade { transition: none !important; }
+}
+
 .pc-glare {
     position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
     background:

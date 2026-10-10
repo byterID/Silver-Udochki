@@ -34,6 +34,9 @@
             </main>
         </div>
 
+        {{-- Монитор-каталог: открывается табличкой в лавке и кнопкой «Каталог» в шапке --}}
+        @include('shop.partials.catalog-monitor')
+
         {{-- Корзина в руке. В панели управления не нужна --}}
         @unless (request()->routeIs('control-panel.*'))
             <x-basket />
