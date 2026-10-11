@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Services\ShopCatalog;
+use App\Models\Category;
+use App\Models\Chapter;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CatalogController extends Controller
 {
-    /** Главная: лавка с продавцом. Монитор-каталог подключается в layouts/app. */
-    public function home(Request $request, ShopCatalog $shop): View
+    /** Главная: лавка с продавцом. */
+    public function home(Request $request): View
     {
         $user = $request->user();
-        $promos = $shop->activePromos();
+        $promos = $this->activePromos();
+        $catalog = $this->catalogData();
 
         $front = [
             'greeting' => $user ? 'А, '.$user->name.'! Рад снова видеть.' : 'Здравствуй, путник!',
@@ -23,6 +27,8 @@ class CatalogController extends Controller
             'idle' => config('shop.idle_replies', []),
             'promos' => array_column($promos, 'title'),
             'searchUrl' => route('catalog.search'),
+            'firstChapter' => array_key_first($catalog['chapters']),
+            'catalog' => $catalog,
             'options' => [
                 ['type' => 'link',  'label' => 'Покажи удочки',      'url' => route('catalog.category', 'rods'), 'reply' => 'Пойдём, у меня их целая стойка!'],
                 ['type' => 'link',  'label' => 'Нужна наживка',      'url' => route('catalog.category', 'bait'), 'reply' => 'Свеженькая, утром завезли. Сейчас покажу.'],
@@ -35,15 +41,80 @@ class CatalogController extends Controller
         return view('welcome', compact('front', 'promos'));
     }
 
+    /** Только акции, которые действуют прямо сейчас. ends — метка в мс для таймера в браузере. */
+    private function activePromos(): array
+    {
+        $now = now();
+
+        /** @var array<int, array<string, mixed>> $promos */
+        $promos = config('shop.promos', []);
+
+        return collect($promos)
+            ->filter(function (array $p) use ($now): bool {
+                $starts = isset($p['starts_at']) ? Carbon::parse($p['starts_at']) : null;
+                $ends = isset($p['ends_at']) ? Carbon::parse($p['ends_at']) : null;
+
+                return (! $starts || $starts->lte($now)) && (! $ends || $ends->gt($now));
+            })
+            ->map(fn (array $p) => [
+                'title' => $p['title'],
+                'note' => $p['note'] ?? null,
+                'ends' => isset($p['ends_at']) ? Carbon::parse($p['ends_at'])->getTimestampMs() : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Данные для «монитора»: главы, категории и товары внутри них.
+     *
+     * @return array{chapters: array<string, array<string, mixed>>, categories: array<string, array<string, mixed>>}
+     */
+    private function catalogData(): array
+    {
+        $chapters = Chapter::query()
+            ->orderBy('sort')
+            ->with([
+                'categories',
+                'categories.products' => fn ($query) => $query->where('is_active', true)->orderBy('id'),
+            ])
+            ->get();
+
+        $data = ['chapters' => [], 'categories' => []];
+
+        foreach ($chapters as $chapter) {
+            $data['chapters'][$chapter->slug] = [
+                'title' => $chapter->title,
+                'icon' => $chapter->icon,
+                'categories' => $chapter->categories->pluck('slug')->all(),
+            ];
+
+            foreach ($chapter->categories as $category) {
+                $data['categories'][$category->slug] = [
+                    'title' => $category->title,
+                    'icon' => $category->icon,
+                    'description' => $category->description,
+                    'url' => route('catalog.category', $category->slug),
+                    'products' => $category->products
+                        ->map(fn (Product $p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'price' => $p->price,
+                            'icon' => $p->icon,
+                        ])
+                        ->values()
+                        ->all(),
+                ];
+            }
+        }
+
+        return $data;
+    }
+
     public function category(string $slug): View
     {
-        $category = config('shop.categories.'.$slug);
-        abort_if($category === null, 404);
-
-        $products = array_values(array_filter(
-            config('shop.products', []),
-            fn (array $p) => $p['category'] === $slug,
-        ));
+        $category = Category::query()->where('slug', $slug)->firstOrFail();
+        $products = $category->products()->active()->orderBy('id')->get();
 
         return view('catalog.category', compact('slug', 'category', 'products'));
     }
@@ -53,38 +124,45 @@ class CatalogController extends Controller
         $raw = $request->query('q');
         $query = Str::limit(trim(is_string($raw) ? $raw : ''), 100, '');
         $words = $this->searchWords($query);
-        $categories = config('shop.categories', []);
 
-        $scored = [];
-        foreach (config('shop.products', []) as $product) {
-            $haystack = $this->normalize(implode(' ', [
-                $product['name'],
-                $categories[$product['category']]['title'] ?? '',
-                implode(' ', $product['tags'] ?? []),
-            ]));
+        $products = collect();
+        $matchedCategories = [];
 
-            $score = count(array_filter($words, fn (string $w) => str_contains($haystack, $w)));
+        if ($words !== []) {
+            // Отбор в PHP: SQLite (тесты) не умеет lower() для кириллицы.
+            $products = Product::query()
+                ->active()
+                ->with('category')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Product $p) => [
+                    'score' => $this->score($this->normalize(implode(' ', [
+                        $p->name,
+                        $p->category->title,
+                        implode(' ', $p->tags ?? []),
+                    ])), $words),
+                    'product' => $p,
+                ])
+                ->filter(fn (array $row) => $row['score'] > 0)
+                ->sortByDesc('score')
+                ->pluck('product')
+                ->values();
 
-            if ($score > 0) {
-                $scored[] = ['score' => $score, 'product' => $product];
-            }
+            $matchedCategories = Category::query()
+                ->orderBy('sort')
+                ->get()
+                ->filter(fn (Category $c) => $this->score($this->normalize($c->title), $words) > 0)
+                ->keyBy('slug')
+                ->all();
         }
 
-        usort($scored, fn (array $a, array $b) => $b['score'] <=> $a['score']);
-        $products = array_column($scored, 'product');
-
-        $matchedCategories = array_filter($categories, function (array $category) use ($words): bool {
-            $title = $this->normalize($category['title']);
-            foreach ($words as $w) {
-                if (str_contains($title, $w)) {
-                    return true;
-                }
-            }
-
-            return false;
-        });
-
         return view('catalog.search', compact('query', 'products', 'matchedCategories'));
+    }
+
+    /** @param list<string> $words */
+    private function score(string $haystack, array $words): int
+    {
+        return count(array_filter($words, fn (string $w) => str_contains($haystack, $w)));
     }
 
     private function normalize(string $text): string
@@ -94,7 +172,8 @@ class CatalogController extends Controller
 
     /**
      * Простейший «стемминг»: срезаем окончания, чтобы «блесну», «блёсны» и «блесна» совпадали.
-     * Слова короче 3 букв («на», «с») игнорируем.
+     *
+     * @return list<string>
      */
     private function searchWords(string $query): array
     {

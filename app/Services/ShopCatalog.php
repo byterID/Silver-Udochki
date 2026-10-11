@@ -4,20 +4,25 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Chapter;
 use Illuminate\Support\Carbon;
 
-/** Каталог лавки из config/shop.php: главы, категории, товары и акции. */
+/** Каталог лавки: главы, категории и товары из БД, акции из config/shop.php. */
 class ShopCatalog
 {
+    /** @var array{chapters: array<string, array<string, mixed>>, categories: array<string, array<string, mixed>>}|null */
+    private ?array $catalog = null;
+
     public function firstChapter(): ?string
     {
-        /** @var array<string, array<string, mixed>> $chapters */
-        $chapters = config('shop.chapters', []);
-
-        return array_key_first($chapters);
+        return array_key_first($this->catalogData()['chapters']);
     }
 
-    /** Только акции, которые действуют прямо сейчас. ends — метка в мс для таймера в браузере. */
+    /**
+     * Только акции, которые действуют прямо сейчас. ends — метка в мс для таймера в браузере.
+     *
+     * @return array<int, array{title: mixed, note: mixed, ends: int|null}>
+     */
     public function activePromos(): array
     {
         $now = now();
@@ -41,48 +46,61 @@ class ShopCatalog
             ->all();
     }
 
-    /** Данные для «монитора»: главы, категории и товары внутри них. */
+    /**
+     * Данные для «монитора»: главы, категории и товары внутри них.
+     *
+     * @return array{chapters: array<string, array<string, mixed>>, categories: array<string, array<string, mixed>>}
+     */
     public function catalogData(): array
     {
-        /** @var array<string, array<string, mixed>> $categories */
-        $categories = config('shop.categories', []);
+        if ($this->catalog !== null) {
+            return $this->catalog;
+        }
 
-        /** @var array<int, array<string, mixed>> $productList */
-        $productList = config('shop.products', []);
+        $chapters = Chapter::query()
+            ->with('categories.products')
+            ->orderBy('sort')
+            ->orderBy('id')
+            ->get();
 
-        /** @var array<string, array<string, mixed>> $chapters */
-        $chapters = config('shop.chapters', []);
+        $chapterData = [];
+        $categoryData = [];
 
-        $products = collect($productList)->groupBy('category');
+        foreach ($chapters as $chapter) {
+            $slugs = [];
 
-        return [
-            'chapters' => collect($chapters)
-                ->map(fn (array $c) => [
-                    'title' => $c['title'],
-                    'icon' => $c['icon'],
-                    'categories' => array_values(array_filter(
-                        (array) $c['categories'],
-                        fn (string $s) => isset($categories[$s]),
-                    )),
-                ])
-                ->all(),
-            'categories' => collect($categories)
-                ->map(fn (array $c, string $slug) => [
-                    'title' => $c['title'],
-                    'icon' => $c['icon'],
-                    'description' => $c['description'],
-                    'url' => route('catalog.category', $slug),
-                    'products' => $products->get($slug, collect())
-                        ->map(fn (array $p) => [
-                            'id' => $p['id'],
-                            'name' => $p['name'],
-                            'price' => $p['price'],
-                            'icon' => $p['icon'],
+            foreach ($chapter->categories->sortBy('sort') as $category) {
+                $slugs[] = $category->slug;
+
+                $categoryData[$category->slug] = [
+                    'title' => $category->title,
+                    'icon' => $category->icon,
+                    'description' => $category->description,
+                    'url' => route('catalog.category', $category->slug),
+                    'products' => $category->products
+                        ->where('is_active', true)
+                        ->sortBy('id')
+                        ->map(fn ($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'price' => $p->price,
+                            'icon' => $p->icon ?: $category->icon,
                         ])
                         ->values()
                         ->all(),
-                ])
-                ->all(),
+                ];
+            }
+
+            $chapterData[$chapter->slug] = [
+                'title' => $chapter->title,
+                'icon' => $chapter->icon,
+                'categories' => $slugs,
+            ];
+        }
+
+        return $this->catalog = [
+            'chapters' => $chapterData,
+            'categories' => $categoryData,
         ];
     }
 }
