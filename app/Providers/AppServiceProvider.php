@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\View\Composers\CatalogNavComposer;
+use App\View\Composers\CatalogMonitorComposer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -32,8 +32,8 @@ class AppServiceProvider extends ServiceProvider
         // В разработке ловим N+1 и обращения к незаполненным атрибутам
         Model::shouldBeStrict(! $this->app->isProduction());
 
-        // Разделы и категории для кнопки «Каталог» в шапке
-        View::composer('layouts.navigation', CatalogNavComposer::class);
+        // Монитор-каталог есть на каждой странице (открывается и из шапки)
+        View::composer('shop.partials.catalog-monitor', CatalogMonitorComposer::class);
 
         // За прокси генерируем только https-ссылки
         if ($this->app->isProduction()) {

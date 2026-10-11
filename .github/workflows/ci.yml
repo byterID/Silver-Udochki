@@ -91,7 +91,7 @@ jobs:
         run: docker compose config --quiet
 
       - name: Проверить shell-скрипты
-        run: shellcheck --severity=warning docker/entrypoint.sh docker/kafka/create-topics.sh
+        run: shellcheck --severity=warning docker/entrypoint.sh docker/kafka/create-topics.sh docker/db/catalog-dump.sh docker/db/catalog-restore.sh
       - name: Собрать Docker-образ
         run: docker build --target runtime -t silver-udochki-app .
 
