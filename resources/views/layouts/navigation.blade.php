@@ -1,10 +1,4 @@
-@php
-    $chapters = $catalogNav['chapters'] ?? [];
-    $categories = $catalogNav['categories'] ?? [];
-@endphp
-
-<nav x-data="{ catalogOpen: false, mobileSearch: false, chapter: @js(array_key_first($chapters)) }"
-     @keydown.escape.window="catalogOpen = false"
+<nav x-data="{ mobileSearch: false }"
      class="sticky top-0 z-40 border-b-4 border-amber-800 bg-emerald-950 shadow">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 items-center gap-2 sm:gap-4">
@@ -15,16 +9,13 @@
                 <span class="hidden text-lg font-semibold tracking-wide md:inline">Silver Udochki</span>
             </a>
 
-            {{-- Каталог --}}
+            {{-- Каталог: открывает тот же монитор, что и табличка в лавке --}}
             <button type="button"
-                    @click="catalogOpen = !catalogOpen; mobileSearch = false"
-                    :aria-expanded="catalogOpen"
+                    @click="mobileSearch = false; $dispatch('catalog-open', { from: $el })"
+                    aria-haspopup="dialog"
                     class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-amber-700 px-3 text-sm font-semibold text-amber-50 transition hover:bg-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 sm:px-4">
-                <svg x-show="!catalogOpen" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                     <path d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-                <svg x-show="catalogOpen" x-cloak class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                    <path d="M6 18L18 6M6 6l12 12"/>
                 </svg>
                 <span class="hidden sm:inline">Каталог</span>
             </button>
@@ -34,7 +25,7 @@
                 <div class="flex w-full overflow-hidden rounded-lg border-2 border-amber-700 bg-white focus-within:border-amber-500">
                     <input type="search" name="q" value="{{ request()->routeIs('catalog.search') ? request('q') : '' }}"
                            maxlength="100" placeholder="Искать удочки, блёсны, манки…"
-                           class="w-full border-0 px-4 text-sm font-medium bg-orange-100 text-amber-600 placeholder:text-amber-600 focus:ring-0">
+                           class="w-full border-0 px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0">
                     <button type="submit" class="bg-amber-700 px-4 text-amber-50 transition hover:bg-amber-600" aria-label="Найти">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                             <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
@@ -45,7 +36,7 @@
 
             <div class="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:gap-2">
                 {{-- Поиск (телефон) --}}
-                <button type="button" @click="mobileSearch = !mobileSearch; catalogOpen = false"
+                <button type="button" @click="mobileSearch = !mobileSearch"
                         class="rounded-full p-2 text-amber-100 transition hover:bg-emerald-800 sm:hidden" aria-label="Поиск">
                     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
@@ -120,52 +111,5 @@
                    x-effect="mobileSearch && $nextTick(() => $el.focus())"
                    class="w-full rounded-lg border-2 border-amber-700 px-4 text-sm text-gray-800 focus:border-amber-500 focus:ring-0">
         </form>
-    </div>
-
-    {{-- Затемнение под каталогом --}}
-    <div x-show="catalogOpen" x-cloak x-transition.opacity
-         @click="catalogOpen = false"
-         class="fixed inset-x-0 bottom-0 top-16 bg-black/40"></div>
-
-    {{-- Экран каталога --}}
-    <div x-show="catalogOpen" x-cloak x-transition.origin.top
-         class="absolute inset-x-0 top-full max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-amber-800 bg-white shadow-xl">
-        <div class="mx-auto flex max-w-7xl flex-col sm:flex-row">
-
-            {{-- Разделы --}}
-            <ul class="flex shrink-0 gap-1 overflow-x-auto border-b border-gray-200 p-3 sm:w-60 sm:flex-col sm:border-b-0 sm:border-r">
-                @foreach ($chapters as $key => $ch)
-                    <li>
-                        <button type="button"
-                                @mouseenter="chapter = @js($key)" @click="chapter = @js($key)"
-                                :class="chapter === @js($key) ? 'bg-amber-100 text-amber-900' : 'text-gray-700 hover:bg-gray-100'"
-                                class="flex w-full items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm font-medium transition">
-                            <span class="text-lg" aria-hidden="true">{{ $ch['icon'] }}</span>
-                            {{ $ch['title'] }}
-                        </button>
-                    </li>
-                @endforeach
-            </ul>
-
-            {{-- Категории выбранного раздела --}}
-            <div class="flex-1 p-4 sm:p-6">
-                @foreach ($chapters as $key => $ch)
-                    <div x-show="chapter === @js($key)" @if (! $loop->first) x-cloak @endif
-                         class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach ($ch['categories'] as $slug)
-                            @php $cat = $categories[$slug]; @endphp
-                            <a href="{{ $cat['url'] }}"
-                               class="flex items-start gap-3 rounded-lg border border-gray-200 p-3 transition hover:border-amber-400 hover:bg-amber-50">
-                                <span class="text-2xl leading-none" aria-hidden="true">{{ $cat['icon'] }}</span>
-                                <span class="min-w-0">
-                                    <span class="block text-sm font-semibold text-gray-900">{{ $cat['title'] }}</span>
-                                    <span class="block text-xs text-gray-500">{{ $cat['description'] }}</span>
-                                </span>
-                            </a>
-                        @endforeach
-                    </div>
-                @endforeach
-            </div>
-        </div>
     </div>
 </nav>

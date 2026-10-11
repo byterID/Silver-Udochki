@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(RolesAndPermissionsSeeder::class);
+        $this->call(CatalogSeeder::class);
 
         $email = config('access.admin.email');
         $password = config('access.admin.password');

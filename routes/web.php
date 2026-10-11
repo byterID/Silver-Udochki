@@ -42,7 +42,7 @@ Route::middleware('auth')->group(function () {
 Route::get('/', [CatalogController::class, 'home'])->name('home');
 
 Route::get('/catalog/{slug}', [CatalogController::class, 'category'])
-    ->where('slug', '[a-z]+')
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
     ->name('catalog.category');
 
 Route::get('/search', [CatalogController::class, 'search'])
