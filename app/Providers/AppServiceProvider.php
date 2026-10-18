@@ -7,7 +7,10 @@ namespace App\Providers;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\ShopCatalog;
 use App\View\Composers\CatalogMonitorComposer;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +39,13 @@ class AppServiceProvider extends ServiceProvider
 
         // В разработке ловим N+1 и обращения к незаполненным атрибутам
         Model::shouldBeStrict(! $this->app->isProduction());
+
+        // Корзина пересчитывается при каждом изменении, а вот подбирать промокоды перебором нельзя
+        RateLimiter::for('cart', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));
+        RateLimiter::for('promo-code', fn (Request $request) => [
+            Limit::perMinute(10)->by('minute:'.$request->ip()),
+            Limit::perHour(60)->by('hour:'.$request->ip()),
+        ]);
 
         // Монитор-каталог есть на каждой странице (открывается и из шапки)
         View::composer('shop.partials.catalog-monitor', CatalogMonitorComposer::class);

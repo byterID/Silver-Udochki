@@ -96,7 +96,11 @@
                     </span>
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-medium" x-text="item.name"></p>
-                        <p class="text-xs text-stone-500" x-text="$store.cart.money(item.price)"></p>
+                        <p class="flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                            <span :class="item.old_price ? 'font-semibold text-red-800' : 'text-stone-500'" x-text="$store.cart.money(item.price)"></span>
+                            <s x-show="item.old_price" class="text-stone-400" x-text="$store.cart.money(item.old_price)"></s>
+                            <span x-show="item.badge" class="rounded bg-red-800 px-1 text-[10px] font-bold text-amber-50" x-text="item.badge"></span>
+                        </p>
                     </div>
                     <div class="flex items-center gap-1">
                         <button type="button" @click="$store.cart.dec(item.id)" class="h-7 w-7 rounded bg-amber-200 hover:bg-amber-300" aria-label="Меньше">−</button>
@@ -107,8 +111,63 @@
             </template>
         </ul>
 
-        <div x-show="$store.cart.count > 0" class="space-y-2 border-t-2 border-amber-900/20 px-4 py-3">
-            <div class="flex justify-between font-bold">
+        <p x-show="$store.cart.notice" x-cloak class="border-t border-amber-900/10 bg-amber-100 px-4 py-2 text-xs text-amber-900">
+            <span x-text="$store.cart.notice"></span>
+            <button type="button" @click="$store.cart.notice = ''" class="ml-1 underline">понятно</button>
+        </p>
+
+        <div x-show="$store.cart.count > 0" class="space-y-2 border-t-2 border-amber-900/20 px-4 py-3 text-sm">
+            {{-- Скидки --}}
+            <template x-if="$store.cart.itemsDiscount > 0 || $store.cart.codeDiscount > 0">
+                <div class="space-y-1">
+                    <div class="flex justify-between text-stone-600">
+                        <span>Товары</span>
+                        <span x-text="$store.cart.money($store.cart.subtotal)"></span>
+                    </div>
+                    <div x-show="$store.cart.itemsDiscount > 0" class="flex justify-between text-red-800">
+                        <span>Скидки по акциям</span>
+                        <span x-text="'−' + $store.cart.money($store.cart.itemsDiscount)"></span>
+                    </div>
+                    <div x-show="$store.cart.code" class="flex items-center justify-between gap-2 text-red-800">
+                        <span class="min-w-0 truncate">
+                            Промокод <span class="font-mono font-semibold" x-text="$store.cart.code?.code"></span>
+                            <button type="button" @click="$store.cart.removeCode()" class="ml-0.5 text-stone-400 hover:text-red-800" aria-label="Убрать промокод">✕</button>
+                        </span>
+                        <span class="shrink-0" x-text="'−' + $store.cart.money($store.cart.codeDiscount)"></span>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Промокод --}}
+            <form x-show="!$store.cart.code" @submit.prevent="$store.cart.applyCode()" class="flex gap-1.5">
+                <label for="cart-code" class="sr-only">Промокод</label>
+                <input id="cart-code" x-model="$store.cart.codeInput" maxlength="32" autocomplete="off" placeholder="Промокод"
+                       @input="$store.cart.codeError = ''"
+                       class="min-w-0 flex-1 rounded-md border-amber-900/30 bg-white/70 py-1 font-mono text-sm uppercase placeholder:font-sans placeholder:normal-case focus:border-emerald-800 focus:ring-emerald-800">
+                <button type="submit" :disabled="$store.cart.codeBusy || !$store.cart.codeInput.trim()"
+                        class="rounded-md bg-amber-800 px-3 text-sm font-semibold text-amber-50 hover:bg-amber-700 disabled:opacity-50">
+                    Применить
+                </button>
+            </form>
+            <p x-show="$store.cart.codeError" x-cloak class="text-xs text-red-800" x-text="$store.cart.codeError"></p>
+
+            {{-- Доставка --}}
+            <template x-if="$store.cart.delivery">
+                <div class="text-xs">
+                    <p x-show="$store.cart.delivery.free" class="font-semibold text-emerald-800">🚚 Доставка бесплатно</p>
+                    <div x-show="!$store.cart.delivery.free">
+                        <p class="text-stone-600">
+                            🚚 До бесплатной доставки: <span class="font-semibold" x-text="$store.cart.money($store.cart.delivery.left)"></span>
+                        </p>
+                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-amber-900/15">
+                            <div class="h-full rounded-full bg-emerald-700 transition-[width] duration-500"
+                                 :style="`width: ${Math.round($store.cart.delivery.progress * 100)}%`"></div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex justify-between text-base font-bold">
                 <span>Итого</span>
                 <span x-text="$store.cart.money($store.cart.total)"></span>
             </div>
