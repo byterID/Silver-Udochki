@@ -70,6 +70,23 @@ final readonly class CartQuote
         return $from === null ? 0 : max(0, $from - $this->total());
     }
 
+    /** Доставка по тарифу из config/shop.php, если акция её не обнулила. Пустую корзину не везут. */
+    public function deliveryPrice(): int
+    {
+        return $this->lines === [] || $this->hasFreeDelivery() ? 0 : self::deliveryFee();
+    }
+
+    /** К оплате: товары после всех скидок плюс доставка. */
+    public function toPay(): int
+    {
+        return $this->total() + $this->deliveryPrice();
+    }
+
+    public static function deliveryFee(): int
+    {
+        return max(0, (int) config('shop.delivery_price'));
+    }
+
     /** @return array<string, mixed> */
     public function toArray(): array
     {
@@ -102,6 +119,9 @@ final readonly class CartQuote
                 'from' => $this->freeDeliveryFrom(),
                 'left' => $this->leftToFreeDelivery(),
             ],
+            'delivery_fee' => self::deliveryFee(),
+            'delivery_price' => $this->deliveryPrice(),
+            'to_pay' => $this->toPay(),
         ];
     }
 }

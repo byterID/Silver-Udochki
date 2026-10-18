@@ -21,7 +21,7 @@ class UpdateStockRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reason' => ['required', Rule::enum(StockReason::class)],
+            'reason' => ['required', Rule::enum(StockReason::class)->only(StockReason::manual())],
             'quantity' => [
                 'required', 'integer',
                 'min:'.($this->input('reason') === StockReason::Restock->value ? 1 : 0),

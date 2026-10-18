@@ -58,7 +58,10 @@
                                 <x-dog-avatar :seed="Auth::id()" :size="32" />
                                 <span class="hidden min-w-0 text-left leading-tight lg:block">
                                     <span class="block max-w-[9rem] truncate text-sm font-medium">{{ Auth::user()->name }}</span>
-                                    <span class="block text-xs text-amber-300">{{ $money($wallet['balance']) }}</span>
+                                    <span class="block text-xs text-amber-300"
+                                          x-data="{ balance: @js($wallet['balance']) }"
+                                          @wallet-changed.window="balance = $event.detail.balance"
+                                          x-text="$store.cart.money(balance)">{{ $money($wallet['balance']) }}</span>
                                 </span>
                             @else
                                 <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -83,7 +86,10 @@
                             <div class="border-b border-gray-100 px-4 py-2">
                                 <div class="flex items-baseline justify-between gap-2">
                                     <span class="text-xs text-gray-500">Баланс</span>
-                                    <span class="text-base font-semibold text-emerald-800">{{ $money($wallet['balance']) }}</span>
+                                    <span class="text-base font-semibold text-emerald-800"
+                                          x-data="{ balance: @js($wallet['balance']) }"
+                                          @wallet-changed.window="balance = $event.detail.balance"
+                                          x-text="$store.cart.money(balance)">{{ $money($wallet['balance']) }}</span>
                                 </div>
 
                                 @if ($wallet['history']->isNotEmpty())
@@ -108,6 +114,10 @@
                                 @endif
                             </div>
 
+                            <button type="button" @click="$dispatch('orders-open')"
+                                    class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
+                                Мои заказы
+                            </button>
                             <x-dropdown-link :href="route('tasks.index')">Мои задачи</x-dropdown-link>
                             <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
 

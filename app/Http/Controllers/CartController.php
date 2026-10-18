@@ -18,7 +18,7 @@ use Illuminate\Http\Response;
  */
 class CartController extends Controller
 {
-    private const SESSION_KEY = 'cart.promo_code';
+    public const SESSION_KEY = 'cart.promo_code';
 
     public function __construct(private readonly PriceCalculator $prices) {}
 

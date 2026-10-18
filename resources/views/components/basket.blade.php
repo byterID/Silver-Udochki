@@ -16,7 +16,8 @@
             return `left:${x}%; top:${y}%; --r:${r}deg`;
         },
     }"
-    x-init="$watch('$store.cart.bump', () => { wobble = false; requestAnimationFrame(() => wobble = true) })"
+    x-init="$store.cart.deliveryFee = @js(\App\Services\Pricing\CartQuote::deliveryFee());
+            $watch('$store.cart.bump', () => { wobble = false; requestAnimationFrame(() => wobble = true) })"
     @keydown.escape.window="open = false"
     class="pointer-events-none fixed bottom-0 right-0 z-40 select-none"
 >
@@ -83,7 +84,22 @@
             <button type="button" @click="open = false" class="text-stone-500 hover:text-stone-900" aria-label="Закрыть">✕</button>
         </div>
 
-        <p x-show="$store.cart.count === 0" class="px-4 py-6 text-sm text-stone-600">
+        {{-- Заказ только что оформлен --}}
+        <div x-show="$store.cart.count === 0 && $store.cart.placed" x-cloak class="space-y-2 px-4 py-5 text-sm">
+            <p class="font-semibold text-emerald-800">
+                ✅ Заказ <span x-text="$store.cart.placed?.number"></span> оформлен!
+            </p>
+            <p class="text-stone-600">
+                С кошелька списано <span class="font-semibold" x-text="$store.cart.money($store.cart.placed?.total ?? 0)"></span>.
+                Спасибо, что заглянул, удачной охоты и хорошего клёва!
+            </p>
+            <button type="button" @click="open = false; $dispatch('orders-open', { highlight: $store.cart.placed?.id })"
+                    class="text-sm font-semibold text-emerald-800 underline hover:text-emerald-700">
+                Мои заказы
+            </button>
+        </div>
+
+        <p x-show="$store.cart.count === 0 && !$store.cart.placed" class="px-4 py-6 text-sm text-stone-600">
             Пока пусто. Загляни в каталог, там найдётся всё для охоты и рыбалки.
         </p>
 
@@ -169,13 +185,32 @@
                 </div>
             </template>
 
-            <div class="flex justify-between text-base font-bold">
-                <span>Итого</span>
-                <span x-text="$store.cart.money($store.cart.total)"></span>
+            <div class="flex justify-between text-stone-600">
+                <span>Доставка</span>
+                <span x-show="$store.cart.deliveryPrice > 0" x-text="$store.cart.money($store.cart.deliveryPrice)"></span>
+                <span x-show="$store.cart.deliveryPrice === 0" class="font-semibold text-emerald-800">бесплатно</span>
             </div>
-            <button type="button" disabled class="w-full cursor-not-allowed rounded-md bg-emerald-800 py-2 font-semibold text-amber-50 opacity-60">
-                Оформление скоро
-            </button>
+
+            <div class="flex justify-between text-base font-bold">
+                <span>К оплате</span>
+                <span x-text="$store.cart.money($store.cart.toPay)"></span>
+            </div>
+
+            <p x-show="$store.cart.checkoutError" x-cloak role="alert" class="rounded bg-red-100 px-2 py-1.5 text-xs text-red-800"
+               x-text="$store.cart.checkoutError"></p>
+
+            @auth
+                <button type="button" @click="$store.cart.checkout()" :disabled="$store.cart.checkoutBusy"
+                        class="w-full rounded-md bg-emerald-800 py-2 font-semibold text-amber-50 transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
+                    <span x-show="!$store.cart.checkoutBusy" x-text="'Оформить за ' + $store.cart.money($store.cart.toPay)"></span>
+                    <span x-show="$store.cart.checkoutBusy" x-cloak>Оформляем…</span>
+                </button>
+            @else
+                <a href="{{ route('login') }}"
+                   class="block w-full rounded-md bg-emerald-800 py-2 text-center font-semibold text-amber-50 transition hover:bg-emerald-700">
+                    Войдите, чтобы оформить заказ
+                </a>
+            @endauth
             <button type="button" @click="$store.cart.clear()" class="w-full text-xs text-stone-500 hover:text-red-800">
                 Вытряхнуть корзину
             </button>

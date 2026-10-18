@@ -9,6 +9,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ControlPanelController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PromotionController;
@@ -59,6 +60,12 @@ Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(f
     Route::post('/quote', 'quote')->middleware('throttle:cart')->name('quote');
     Route::post('/promo-code', 'applyCode')->middleware('throttle:promo-code')->name('promo-code.apply');
     Route::delete('/promo-code', 'removeCode')->middleware('throttle:cart')->name('promo-code.remove');
+});
+
+// Заказы: оформление оплачивает корзину кошельком, история — для окна «Мои заказы»
+Route::middleware('auth')->prefix('orders')->name('orders.')->controller(OrderController::class)->group(function () {
+    Route::get('/', 'index')->middleware('throttle:60,1,orders')->name('index');
+    Route::post('/', 'store')->middleware('throttle:checkout')->name('store');
 });
 
 Route::get('/request-info', RequestInfoController::class)

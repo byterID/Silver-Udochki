@@ -47,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(10)->by('minute:'.$request->ip()),
             Limit::perHour(60)->by('hour:'.$request->ip()),
         ]);
+        // Оформление: повторы с тем же ключом безопасны, но долбить сервер незачем
+        RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
         // Монитор-каталог есть на каждой странице (открывается и из шапки)
         View::composer('shop.partials.catalog-monitor', CatalogMonitorComposer::class);

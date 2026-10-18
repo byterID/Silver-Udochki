@@ -93,7 +93,8 @@ class StockManagementTest extends TestCase
         $admin = $this->userWithRole(RoleName::Admin);
         $product = Product::factory()->create(['stock' => 5]);
 
-        foreach ([['restock', 0], ['restock', -5], ['inventory', -1], ['oops', 5]] as [$reason, $qty]) {
+        // sale — только через оформление заказа, руками его не провести
+        foreach ([['restock', 0], ['restock', -5], ['inventory', -1], ['oops', 5], ['sale', 1]] as [$reason, $qty]) {
             $this->actingAs($admin)
                 ->put(route('control-panel.stock.update', $product), ['reason' => $reason, 'quantity' => $qty])
                 ->assertSessionHasErrors();
