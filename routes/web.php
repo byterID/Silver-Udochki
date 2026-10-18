@@ -10,9 +10,11 @@ use App\Http\Controllers\ControlPanelController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\RequestInfoController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
+use App\Models\Promotion;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -98,6 +100,22 @@ Route::middleware(['auth', 'verified', 'permission:'.PermissionCode::AccessContr
             Route::post('/action-groups', [ActionGroupController::class, 'store'])->name('action-groups.store');
             Route::put('/action-groups/{actionGroup}', [ActionGroupController::class, 'update'])
                 ->name('action-groups.update');
+        });
+
+        // Акции: каждое действие под своим правом (проверки в PromotionPolicy)
+        Route::prefix('promotions')->name('promotions.')->controller(PromotionController::class)->group(function () {
+            Route::get('/', 'index')->can('viewAny', Promotion::class)->name('index');
+            Route::get('/create', 'create')->can('create', Promotion::class)->name('create');
+            Route::get('/products', 'products')->can('pickProducts', Promotion::class)
+                ->middleware('throttle:120,1')->name('products');
+
+            Route::middleware('throttle:30,1')->group(function () {
+                Route::post('/', 'store')->can('create', Promotion::class)->name('store');
+                Route::put('/{promotion}', 'update')->can('update', 'promotion')->name('update');
+                Route::delete('/{promotion}', 'destroy')->can('delete', 'promotion')->name('destroy');
+            });
+
+            Route::get('/{promotion}/edit', 'edit')->can('update', 'promotion')->name('edit');
         });
     });
 

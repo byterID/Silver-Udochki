@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\ChapterFactory;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -18,6 +20,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Chapter extends Model
 {
+    /** @use HasFactory<ChapterFactory> */
+    use HasFactory;
+
     protected $fillable = ['slug', 'title', 'icon', 'sort'];
 
     /** @return HasMany<Category, $this> */
