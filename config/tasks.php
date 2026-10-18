@@ -14,6 +14,6 @@ return [
     'publish_grace_seconds' => 60,
 
     'pending_timeout_minutes' => (int) env('TASKS_PENDING_TIMEOUT_MINUTES', 60),
-    
+
     'result_ttl_minutes' => (int) env('TASKS_RESULT_TTL_MINUTES', 5),
 ];
