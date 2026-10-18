@@ -61,14 +61,22 @@ class PriceCalculator
 
         $lines = [];
         $missing = [];
+        $limited = [];
         foreach ($quantities as $id => $qty) {
             $product = $products->get($id);
-            if ($product === null) {
+
+            // Снят с продажи или закончился на складе: из корзины убираем
+            if ($product === null || $product->stock < 1) {
                 $missing[] = $id;
 
                 continue;
             }
-            $lines[] = new CartLine($product, min($qty, self::MAX_QTY), $this->priceFor($product));
+            // Больше, чем есть на складе: оставляем, сколько есть
+            $available = min($product->stock, self::MAX_QTY);
+            if ($qty > $available) {
+                $limited[] = $id;
+            }
+            $lines[] = new CartLine($product, min($qty, $available), $this->priceFor($product));
         }
 
         $promotion = null;
@@ -77,7 +85,14 @@ class PriceCalculator
             [$promotion, $error] = $this->checkCode($code);
         }
 
-        return new CartQuote($lines, $missing, $promotion, $error, $this->freeDelivery());
+        return new CartQuote(
+            lines: $lines,
+            missing: $missing,
+            code: $promotion,
+            codeError: $error,
+            freeDelivery: $this->freeDelivery(),
+            limited: $limited,
+        );
     }
 
     /**

@@ -62,6 +62,12 @@ class Product extends Model
         return $this->belongsToMany(Promotion::class, 'promotion_product');
     }
 
+    /** Товар ещё есть, но осталось мало: карточка подписывает это красным. */
+    public function isLowStock(): bool
+    {
+        return $this->stock > 0 && $this->stock <= (int) config('shop.low_stock');
+    }
+
     /** @param Builder<Product> $query */
     public function scopeActive(Builder $query): void
     {

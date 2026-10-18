@@ -105,7 +105,9 @@
                     <div class="flex items-center gap-1">
                         <button type="button" @click="$store.cart.dec(item.id)" class="h-7 w-7 rounded bg-amber-200 hover:bg-amber-300" aria-label="Меньше">−</button>
                         <span class="w-6 text-center text-sm font-semibold" x-text="item.qty"></span>
-                        <button type="button" @click="$store.cart.inc(item.id)" class="h-7 w-7 rounded bg-amber-200 hover:bg-amber-300" aria-label="Больше">+</button>
+                        <button type="button" @click="$store.cart.inc(item.id)" :disabled="item.qty >= $store.cart.limitOf(item)"
+                                :title="item.qty >= $store.cart.limitOf(item) ? 'Больше нет на складе' : ''"
+                                class="h-7 w-7 rounded bg-amber-200 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-200" aria-label="Больше">+</button>
                     </div>
                 </li>
             </template>
