@@ -60,6 +60,12 @@ class User extends Authenticatable
         return $this->hasMany(Task::class);
     }
 
+    /** @return HasMany<GameRound, $this> */
+    public function gameRounds(): HasMany
+    {
+        return $this->hasMany(GameRound::class);
+    }
+
     /**
      * Может ещё не быть: кошелёк открывает WalletKeeper::walletOf().
      *

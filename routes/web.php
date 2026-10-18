@@ -8,6 +8,7 @@ use App\Http\Controllers\ActionGroupController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ControlPanelController;
+use App\Http\Controllers\GameController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderReturnController;
@@ -69,6 +70,14 @@ Route::middleware('auth')->prefix('orders')->name('orders.')->group(function () 
     Route::post('/', [OrderController::class, 'store'])->middleware('throttle:checkout')->name('store');
     Route::post('/{order}/returns', [OrderReturnController::class, 'store'])
         ->whereNumber('order')->can('refund', 'order')->middleware('throttle:order-return')->name('returns.store');
+});
+
+// Мини-игра: единственный способ заработать. Полёты и награду считает сервер (GameMaster)
+Route::middleware('auth')->prefix('game')->name('game.')->controller(GameController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::post('/rounds', 'store')->middleware('throttle:game-start')->name('rounds.store');
+    Route::post('/rounds/{round}/finish', 'finish')->whereUuid('round')->can('play', 'round')
+        ->middleware('throttle:60,1,game-finish')->name('rounds.finish');
 });
 
 Route::get('/request-info', RequestInfoController::class)
