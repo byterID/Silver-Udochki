@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\PermissionCode;
 use App\Http\Controllers\AccessControlController;
 use App\Http\Controllers\ActionGroupController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ControlPanelController;
 use App\Http\Controllers\NotificationController;
@@ -50,6 +51,13 @@ Route::get('/catalog/{slug}', [CatalogController::class, 'category'])
 Route::get('/search', [CatalogController::class, 'search'])
     ->middleware('throttle:60,1')
     ->name('catalog.search');
+
+// Корзина: пересчёт цен и промокод (сама корзина в localStorage)
+Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(function () {
+    Route::post('/quote', 'quote')->middleware('throttle:cart')->name('quote');
+    Route::post('/promo-code', 'applyCode')->middleware('throttle:promo-code')->name('promo-code.apply');
+    Route::delete('/promo-code', 'removeCode')->middleware('throttle:cart')->name('promo-code.remove');
+});
 
 Route::get('/request-info', RequestInfoController::class)
     ->middleware('throttle:60,1') // не больше 60 запросов в минуту с одного IP
