@@ -13,9 +13,11 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\RequestInfoController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Models\Promotion;
+use App\Models\StockMovement;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -124,6 +126,14 @@ Route::middleware(['auth', 'verified', 'permission:'.PermissionCode::AccessContr
             });
 
             Route::get('/{promotion}/edit', 'edit')->can('update', 'promotion')->name('edit');
+        });
+
+        // Склад: просмотр и изменение остатков под разными правами (StockMovementPolicy)
+        Route::prefix('stock')->name('stock.')->controller(StockController::class)->group(function () {
+            Route::get('/', 'index')->can('viewAny', StockMovement::class)->name('index');
+            Route::get('/movements', 'movements')->can('viewAny', StockMovement::class)->name('movements');
+            Route::put('/{product}', 'update')->can('create', StockMovement::class)
+                ->middleware('throttle:60,1')->name('update');
         });
     });
 

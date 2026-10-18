@@ -33,7 +33,7 @@ class MigrationsTest extends TestCase
     private const REQUIRED_TABLES = [
         'users', 'cache', 'cache_locks', 'sessions', 'roles', 'permissions', 'action_groups',
         'tasks', 'notifications', 'chapters', 'categories', 'products',
-        'promotions', 'promotion_product', 'orders', 'order_items',
+        'promotions', 'promotion_product', 'orders', 'order_items', 'stock_movements',
     ];
 
     public function test_старт_контейнера_мигрирует_пустую_базу_при_кеше_в_бд(): void

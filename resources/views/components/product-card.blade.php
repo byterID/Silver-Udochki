@@ -23,6 +23,21 @@
     <div class="flex flex-1 flex-col p-4">
         <h3 class="font-semibold leading-snug text-stone-800">{{ $product['name'] }}</h3>
 
+        <p @class([
+            'mt-1 text-sm',
+            'text-stone-500' => $product['stock'] === 0,
+            'font-semibold text-red-700' => $product['low'],
+            'text-emerald-800' => $product['stock'] > 0 && ! $product['low'],
+        ])>
+            @if ($product['stock'] === 0)
+                Нет в наличии
+            @elseif ($product['low'])
+                Осталось мало: {{ $product['stock'] }} шт.
+            @else
+                В наличии: {{ $product['stock'] }} шт.
+            @endif
+        </p>
+
         <div class="mt-auto flex items-center justify-between gap-2 pt-4">
             <span class="flex flex-col leading-tight">
                 @if ($product['old_price'])
@@ -30,9 +45,12 @@
                 @endif
                 <span class="text-lg font-bold text-red-900">{{ $money($product['price']) }}</span>
             </span>
+            {{-- Недоступна, когда в корзине уже весь остаток --}}
             <button type="button"
                     @click="$store.cart.add(@js($product), $el.closest('article').querySelector('[data-product-icon]'))"
-                    class="rounded-md bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-amber-50 transition hover:bg-emerald-700 active:scale-95">
+                    :disabled="!$store.cart.canAdd(@js($product))"
+                    @disabled($product['stock'] === 0)
+                    class="rounded-md bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-amber-50 transition hover:bg-emerald-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-800 disabled:active:scale-100">
                 В корзину
             </button>
         </div>

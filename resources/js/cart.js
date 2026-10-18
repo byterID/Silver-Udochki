@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'su_cart_v1';
 
 const QUOTE_URL = '/cart/quote';
+const MAX_QTY = 999; // PriceCalculator::MAX_QTY
 const CODE_URL = '/cart/promo-code';
 
 const isImage = (icon) => /^(\/|https?:)/.test(icon ?? '');
@@ -67,7 +68,7 @@ async function send(method, url, body = null) {
  */
 export default function registerCart(Alpine) {
     Alpine.store('cart', {
-        items: [], // { id, name, price, old_price, badge, icon, qty }; price — уже со скидкой
+        items: [], // { id, name, price, old_price, badge, icon, qty, stock }; price — уже со скидкой
         bump: 0,   // счётчик для анимации «покачивания»
 
         quote: null,   // последний ответ сервера: code, delivery
@@ -116,7 +117,23 @@ export default function registerCart(Alpine) {
             this.refresh();
         },
 
+        /** Сколько этого товара уже лежит в корзине. */
+        qtyOf(id) {
+            return this.items.find((i) => i.id === id)?.qty ?? 0;
+        },
+
+        /** Остаток со страницы — подсказка; окончательно количество урежет сервер. */
+        limitOf(item) {
+            return Math.min(MAX_QTY, item.stock ?? MAX_QTY);
+        },
+
+        canAdd(product) {
+            return this.qtyOf(product.id) < this.limitOf(product);
+        },
+
         add(product, sourceEl = null) {
+            if (!this.canAdd(product)) return;
+
             const found = this.items.find((i) => i.id === product.id);
             if (found) {
                 found.qty++;
@@ -128,6 +145,7 @@ export default function registerCart(Alpine) {
                     old_price: product.old_price ?? null,
                     badge: product.badge ?? null,
                     icon: product.icon,
+                    stock: product.stock ?? null,
                     qty: 1,
                 });
             }
@@ -139,7 +157,7 @@ export default function registerCart(Alpine) {
 
         inc(id) {
             const item = this.items.find((i) => i.id === id);
-            if (item && item.qty < 999) { item.qty++; this.changed(); }
+            if (item && item.qty < this.limitOf(item)) { item.qty++; this.changed(); }
         },
 
         dec(id) {
@@ -181,19 +199,28 @@ export default function registerCart(Alpine) {
             }
         },
 
-        /** Принять расчёт сервера: обновить цены и убрать то, чего больше нет. */
+        /** Принять расчёт сервера: обновить цены и остатки, убрать то, чего больше нет. */
         apply(data) {
             const fresh = new Map(data.items.map((i) => [i.id, i]));
             const missing = new Set(data.missing ?? []);
+            const notices = [];
 
             if (missing.size) {
                 this.items = this.items.filter((i) => !missing.has(i.id));
-                this.notice = 'Часть товаров закончилась, мы убрали их из корзины.';
+                notices.push('Часть товаров закончилась, мы убрали их из корзины.');
             }
+            if (data.limited?.length) {
+                notices.push('Столько нет на складе: положили, сколько осталось.');
+            }
+            if (notices.length) this.notice = notices.join(' ');
+
             for (const item of this.items) {
                 const f = fresh.get(item.id);
                 if (!f) continue;
-                Object.assign(item, { name: f.name, icon: f.icon, price: f.price, old_price: f.old_price, badge: f.badge });
+                Object.assign(item, {
+                    name: f.name, icon: f.icon, price: f.price, old_price: f.old_price, badge: f.badge,
+                    stock: f.stock, qty: f.qty,
+                });
             }
             this.persist();
 

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
  */
 class CatalogSeeder extends Seeder
 {
+    public const INITIAL_STOCK = 100;
+
     public function run(): void
     {
         /** @var array{chapters: array<string, array{title: string, icon: string}>, categories: array<string, array<string, mixed>>} $data */
@@ -63,7 +65,7 @@ class CatalogSeeder extends Seeder
                             'sku' => $sku,
                             'name' => $label === '' ? $name : $name.', '.$label,
                             'price' => $price,
-                            'stock' => crc32($sku) % 50,
+                            'stock' => self::INITIAL_STOCK,
                             'icon' => $item['icon'] ?? $category['icon'],
                             'tags' => json_encode($tags, JSON_UNESCAPED_UNICODE),
                             'is_active' => true,

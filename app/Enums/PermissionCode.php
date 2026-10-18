@@ -14,6 +14,8 @@ enum PermissionCode: string
     case CreatePromotions = 'create_promotions';
     case UpdatePromotions = 'update_promotions';
     case DeletePromotions = 'delete_promotions';
+    case ViewStock = 'view_stock';
+    case UpdateStock = 'update_stock';
 
     public function title(): string
     {
@@ -26,6 +28,8 @@ enum PermissionCode: string
             self::CreatePromotions => 'Создание акций',
             self::UpdatePromotions => 'Изменение акций',
             self::DeletePromotions => 'Удаление акций',
+            self::ViewStock => 'Просмотр склада',
+            self::UpdateStock => 'Изменение остатков',
         };
     }
 
@@ -36,6 +40,7 @@ enum PermissionCode: string
             self::ManageUsers, self::ExportUsers => 'Пользователи',
             self::ViewPromotions, self::CreatePromotions,
             self::UpdatePromotions, self::DeletePromotions => 'Акции',
+            self::ViewStock, self::UpdateStock => 'Склад',
         };
     }
 

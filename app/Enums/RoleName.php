@@ -50,6 +50,8 @@ enum RoleName: string
                 PermissionCode::CreatePromotions->value,
                 PermissionCode::UpdatePromotions->value,
                 PermissionCode::DeletePromotions->value,
+                PermissionCode::ViewStock->value,
+                PermissionCode::UpdateStock->value,
             ],
             self::User, self::Guest => [],
         };

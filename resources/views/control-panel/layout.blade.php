@@ -52,6 +52,14 @@
                     </a>
                 @endcan
 
+                @can('viewAny', App\Models\StockMovement::class)
+                    <a href="{{ route('control-panel.stock.index') }}"
+                       class="rounded-lg px-3 py-2 text-sm font-medium transition
+              {{ request()->routeIs('control-panel.stock.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100' }}">
+                        📦 Склад
+                    </a>
+                @endcan
+
             </nav>
         </aside>
 

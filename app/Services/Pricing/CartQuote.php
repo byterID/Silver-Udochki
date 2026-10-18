@@ -11,7 +11,8 @@ final readonly class CartQuote
 {
     /**
      * @param  list<CartLine>  $lines
-     * @param  list<int>  $missing  товары, которых больше нет в продаже
+     * @param  list<int>  $missing  товары, которых больше нет в продаже или на складе
+     * @param  list<int>  $limited  товары, у которых количество урезано до остатка
      */
     public function __construct(
         public array $lines,
@@ -19,6 +20,7 @@ final readonly class CartQuote
         public ?Promotion $code = null,
         public ?string $codeError = null,
         public ?Promotion $freeDelivery = null,
+        public array $limited = [],
     ) {}
 
     /** Сумма по базовым ценам. */
@@ -77,12 +79,14 @@ final readonly class CartQuote
                 'name' => $l->product->name,
                 'icon' => $l->product->icon ?: $l->product->category->icon,
                 'qty' => $l->quantity,
+                'stock' => $l->product->stock,
                 'price' => $l->price->final,
                 'old_price' => $l->price->hasDiscount() ? $l->price->base : null,
                 'badge' => $l->price->hasDiscount() ? $l->price->promotion?->benefit() : null,
                 'total' => $l->total(),
             ], $this->lines),
             'missing' => $this->missing,
+            'limited' => $this->limited,
             'subtotal' => $this->subtotal(),
             'items_discount' => $this->itemsDiscount(),
             'code' => $this->code === null ? null : [
