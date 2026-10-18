@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
         Route::get('/', 'index')->middleware('throttle:60,1,notifications')->name('index');
         Route::post('/read-all', 'readAll')->name('read-all');
+        Route::post('/clear-read', 'clearRead')->name('clear-read');
         Route::post('/{id}/read', 'read')->name('read');
     });
 });

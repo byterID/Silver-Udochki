@@ -211,6 +211,16 @@ export function notificationBell(urls) {
             } catch {}
         },
 
+        // Удаляет прочитанные. Список показывает последние 10, поэтому после
+        // очистки перечитываем его: на место удалённых встанут более старые непрочитанные.
+        async clearRead() {
+            this.items = this.items.filter((item) => !item.read_at);
+            try {
+                await this.post(urls.clearRead);
+            } catch {}
+            this.load();
+        },
+
         message(item) {
             return item.message ?? 'Статус задачи изменился';
         },

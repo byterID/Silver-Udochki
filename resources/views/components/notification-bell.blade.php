@@ -3,6 +3,7 @@
         'index'   => route('notifications.index'),
         'read'    => route('notifications.read', '__ID__'),
         'readAll' => route('notifications.read-all'),
+        'clearRead' => route('notifications.clear-read'),
     ]))"
     class="relative"
     @keydown.escape.window="open = false"
@@ -28,10 +29,17 @@
 
         <div class="flex items-center justify-between border-b border-amber-200 px-4 py-2">
             <span class="font-semibold text-emerald-950">Уведомления</span>
-            <button type="button" x-show="unread > 0" @click="markAllRead()"
-                    class="text-sm text-emerald-700 hover:underline">
-                Прочитать все
-            </button>
+            <span class="flex items-center gap-3">
+                <button type="button" x-show="unread > 0" @click="markAllRead()"
+                        class="text-sm text-emerald-700 hover:underline">
+                    Прочитать все
+                </button>
+                <button type="button" x-show="items.some((item) => item.read_at)" @click="clearRead()"
+                        title="Удалить прочитанные уведомления"
+                        class="text-sm text-stone-500 hover:text-red-700 hover:underline">
+                    Очистить
+                </button>
+            </span>
         </div>
 
         <template x-if="items.length === 0">

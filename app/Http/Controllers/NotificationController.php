@@ -75,4 +75,12 @@ final class NotificationController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    /** «Очистить»: удаляет прочитанные, непрочитанные остаются. */
+    public function clearRead(Request $request): JsonResponse
+    {
+        $request->user()->readNotifications()->delete();
+
+        return response()->json(['ok' => true]);
+    }
 }
