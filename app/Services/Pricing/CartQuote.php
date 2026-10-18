@@ -11,7 +11,8 @@ final readonly class CartQuote
 {
     /**
      * @param  list<CartLine>  $lines
-     * @param  list<int>  $missing  товары, которых больше нет в продаже
+     * @param  list<int>  $missing  товары, которых больше нет в продаже или на складе
+     * @param  list<int>  $limited  товары, у которых количество урезано до остатка
      */
     public function __construct(
         public array $lines,
@@ -19,6 +20,7 @@ final readonly class CartQuote
         public ?Promotion $code = null,
         public ?string $codeError = null,
         public ?Promotion $freeDelivery = null,
+        public array $limited = [],
     ) {}
 
     /** Сумма по базовым ценам. */
@@ -68,6 +70,23 @@ final readonly class CartQuote
         return $from === null ? 0 : max(0, $from - $this->total());
     }
 
+    /** Доставка по тарифу из config/shop.php, если акция её не обнулила. Пустую корзину не везут. */
+    public function deliveryPrice(): int
+    {
+        return $this->lines === [] || $this->hasFreeDelivery() ? 0 : self::deliveryFee();
+    }
+
+    /** К оплате: товары после всех скидок плюс доставка. */
+    public function toPay(): int
+    {
+        return $this->total() + $this->deliveryPrice();
+    }
+
+    public static function deliveryFee(): int
+    {
+        return max(0, (int) config('shop.delivery_price'));
+    }
+
     /** @return array<string, mixed> */
     public function toArray(): array
     {
@@ -77,12 +96,14 @@ final readonly class CartQuote
                 'name' => $l->product->name,
                 'icon' => $l->product->icon ?: $l->product->category->icon,
                 'qty' => $l->quantity,
+                'stock' => $l->product->stock,
                 'price' => $l->price->final,
                 'old_price' => $l->price->hasDiscount() ? $l->price->base : null,
                 'badge' => $l->price->hasDiscount() ? $l->price->promotion?->benefit() : null,
                 'total' => $l->total(),
             ], $this->lines),
             'missing' => $this->missing,
+            'limited' => $this->limited,
             'subtotal' => $this->subtotal(),
             'items_discount' => $this->itemsDiscount(),
             'code' => $this->code === null ? null : [
@@ -98,6 +119,9 @@ final readonly class CartQuote
                 'from' => $this->freeDeliveryFrom(),
                 'left' => $this->leftToFreeDelivery(),
             ],
+            'delivery_fee' => self::deliveryFee(),
+            'delivery_price' => $this->deliveryPrice(),
+            'to_pay' => $this->toPay(),
         ];
     }
 }

@@ -1,14 +1,6 @@
 @props(['seed' => 0, 'size' => 36])
 
-@php
-    // Окрас собаки выбирается по id пользователя, чтобы аватар не менялся между визитами.
-    $coats = [
-        ['head' => '#a0632e', 'ears' => '#6b3f1d'], // рыжий спаниель
-        ['head' => '#3f3a36', 'ears' => '#1f1b18'], // чёрный лабрадор
-        ['head' => '#d9a066', 'ears' => '#8a5a2b'], // палевый ретривер
-    ];
-    $coat = $coats[abs((int) $seed) % count($coats)];
-@endphp
+@php($coat = App\Support\DogCoat::for((int) $seed))
 
 <span {{ $attributes->merge(['class' => 'inline-flex shrink-0 overflow-hidden rounded-full ring-2 ring-amber-400/70 bg-amber-100']) }}
       style="width: {{ (int) $size }}px; height: {{ (int) $size }}px;">

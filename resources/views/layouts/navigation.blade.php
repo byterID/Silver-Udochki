@@ -47,14 +47,22 @@
                     <x-notification-bell />
                 @endauth
 
+                @php($money = fn (int $v) => number_format($v, 0, ',', ' ').' ₽')
+
                 {{-- Профиль --}}
-                <x-dropdown align="right" width="w-56">
+                <x-dropdown align="right" width="w-72">
                     <x-slot name="trigger">
                         <button type="button"
                                 class="flex items-center gap-2 rounded-lg px-1.5 py-1 text-amber-50 transition hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
                             @auth
                                 <x-dog-avatar :seed="Auth::id()" :size="32" />
-                                <span class="hidden max-w-[9rem] truncate text-sm font-medium lg:inline">{{ Auth::user()->name }}</span>
+                                <span class="hidden min-w-0 text-left leading-tight lg:block">
+                                    <span class="block max-w-[9rem] truncate text-sm font-medium">{{ Auth::user()->name }}</span>
+                                    <span class="block text-xs text-amber-300"
+                                          x-data="{ balance: @js($wallet['balance']) }"
+                                          @wallet-changed.window="balance = $event.detail.balance"
+                                          x-text="$store.cart.money(balance)">{{ $money($wallet['balance']) }}</span>
+                                </span>
                             @else
                                 <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                                     <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>
@@ -74,11 +82,48 @@
                                 <div class="truncate text-xs text-gray-500">{{ Auth::user()->email }}</div>
                             </div>
 
-                            <x-dropdown-link :href="route('tasks.index')">Мои задачи</x-dropdown-link>
-                            <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
+                            {{-- Кошелёк: баланс и последние операции --}}
+                            <div class="border-b border-gray-100 px-4 py-2">
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="text-xs text-gray-500">Баланс</span>
+                                    <span class="text-base font-semibold text-emerald-800"
+                                          x-data="{ balance: @js($wallet['balance']) }"
+                                          @wallet-changed.window="balance = $event.detail.balance"
+                                          x-text="$store.cart.money(balance)">{{ $money($wallet['balance']) }}</span>
+                                </div>
+
+                                @if ($wallet['history']->isNotEmpty())
+                                    <div class="mt-2 text-xs font-medium text-gray-500">История операций</div>
+                                    <ul class="mt-1 max-h-48 divide-y divide-gray-100 overflow-y-auto">
+                                        @foreach ($wallet['history'] as $operation)
+                                            <li class="flex items-start justify-between gap-2 py-1.5">
+                                                <span class="min-w-0">
+                                                    <span class="block truncate text-xs text-gray-700">{{ $operation->reason->label() }}</span>
+                                                    <span class="block truncate text-[11px] text-gray-400">
+                                                        {{ $operation->created_at->format('d.m.Y H:i') }}@if ($operation->note) · {{ $operation->note }}@endif
+                                                    </span>
+                                                </span>
+                                                <span @class([
+                                                    'shrink-0 text-xs font-semibold',
+                                                    'text-emerald-700' => $operation->amount > 0,
+                                                    'text-red-600' => $operation->amount < 0,
+                                                ])>{{ $operation->amount > 0 ? '+' : '−' }}{{ $money(abs($operation->amount)) }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+
+                            <button type="button" @click="$dispatch('orders-open')"
+                                    class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
+                                Мои заказы
+                            </button>
+                            <x-dropdown-link :href="route('tasks.index')">Задачи</x-dropdown-link>
+                            <x-dropdown-link :href="route('game.index')">🦆 Заработать на охоте</x-dropdown-link>
+                            <x-dropdown-link :href="route('profile.edit')">Профиль</x-dropdown-link>
 
                             @can('access_control_panel')
-                                <x-dropdown-link :href="route('control-panel.index')">{{ __('Control panel') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('control-panel.index')">Панель управления</x-dropdown-link>
                             @endcan
                         @else
                             <x-dropdown-link :href="route('login')">Войти</x-dropdown-link>
@@ -96,7 +141,7 @@
                                 @csrf
                                 <x-dropdown-link :href="route('logout')"
                                         onclick="event.preventDefault(); this.closest('form').submit();">
-                                    {{ __('Log Out') }}
+                                    Выйти
                                 </x-dropdown-link>
                             </form>
                         @endauth

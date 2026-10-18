@@ -8,14 +8,19 @@ use App\Http\Controllers\ActionGroupController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ControlPanelController;
+use App\Http\Controllers\GameController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderReturnController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\RequestInfoController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Models\Promotion;
+use App\Models\StockMovement;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
         Route::get('/', 'index')->middleware('throttle:60,1,notifications')->name('index');
         Route::post('/read-all', 'readAll')->name('read-all');
+        Route::post('/clear-read', 'clearRead')->name('clear-read');
         Route::post('/{id}/read', 'read')->name('read');
     });
 });
@@ -57,6 +63,22 @@ Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(f
     Route::post('/quote', 'quote')->middleware('throttle:cart')->name('quote');
     Route::post('/promo-code', 'applyCode')->middleware('throttle:promo-code')->name('promo-code.apply');
     Route::delete('/promo-code', 'removeCode')->middleware('throttle:cart')->name('promo-code.remove');
+});
+
+// Заказы: оформление оплачивает корзину кошельком, история и возвраты — для окна «Мои заказы»
+Route::middleware('auth')->prefix('orders')->name('orders.')->group(function () {
+    Route::get('/', [OrderController::class, 'index'])->middleware('throttle:60,1,orders')->name('index');
+    Route::post('/', [OrderController::class, 'store'])->middleware('throttle:checkout')->name('store');
+    Route::post('/{order}/returns', [OrderReturnController::class, 'store'])
+        ->whereNumber('order')->can('refund', 'order')->middleware('throttle:order-return')->name('returns.store');
+});
+
+// Мини-игра: единственный способ заработать. Полёты и награду считает сервер (GameMaster)
+Route::middleware('auth')->prefix('game')->name('game.')->controller(GameController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::post('/rounds', 'store')->middleware('throttle:game-start')->name('rounds.store');
+    Route::post('/rounds/{round}/finish', 'finish')->whereUuid('round')->can('play', 'round')
+        ->middleware('throttle:60,1,game-finish')->name('rounds.finish');
 });
 
 Route::get('/request-info', RequestInfoController::class)
@@ -124,6 +146,14 @@ Route::middleware(['auth', 'verified', 'permission:'.PermissionCode::AccessContr
             });
 
             Route::get('/{promotion}/edit', 'edit')->can('update', 'promotion')->name('edit');
+        });
+
+        // Склад: просмотр и изменение остатков под разными правами (StockMovementPolicy)
+        Route::prefix('stock')->name('stock.')->controller(StockController::class)->group(function () {
+            Route::get('/', 'index')->can('viewAny', StockMovement::class)->name('index');
+            Route::get('/movements', 'movements')->can('viewAny', StockMovement::class)->name('movements');
+            Route::put('/{product}', 'update')->can('create', StockMovement::class)
+                ->middleware('throttle:60,1')->name('update');
         });
     });
 

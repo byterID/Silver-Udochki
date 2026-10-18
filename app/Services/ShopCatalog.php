@@ -52,8 +52,9 @@ class ShopCatalog
 
     /**
      * Товар для витрины, карточки и корзины: цена уже со скидкой, old_price — до неё.
+     * stock — точный остаток, low — осталось мало (подписывается красным).
      *
-     * @return array{id: int, name: string, icon: string, price: int, old_price: int|null, badge: string|null, color: string|null}
+     * @return array{id: int, name: string, icon: string, price: int, old_price: int|null, badge: string|null, color: string|null, stock: int, low: bool}
      */
     public function presentProduct(Product $product, ?string $fallbackIcon = null): array
     {
@@ -68,6 +69,8 @@ class ShopCatalog
             'old_price' => $promotion ? $price->base : null,
             'badge' => $promotion?->benefit(),
             'color' => $promotion?->color,
+            'stock' => $product->stock,
+            'low' => $product->isLowStock(),
         ];
     }
 

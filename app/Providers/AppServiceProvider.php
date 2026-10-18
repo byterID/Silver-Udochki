@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\ShopCatalog;
 use App\View\Composers\CatalogMonitorComposer;
+use App\View\Composers\WalletComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -46,9 +47,18 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(10)->by('minute:'.$request->ip()),
             Limit::perHour(60)->by('hour:'.$request->ip()),
         ]);
+        // Оформление: повторы с тем же ключом безопасны, но долбить сервер незачем
+        RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
+        // Раунд идёт минуту, так что честному игроку хватит с запасом; чаще — это перебор раскладок
+        RateLimiter::for('game-start', fn (Request $request) => [
+            Limit::perMinute(6)->by('minute:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(90)->by('hour:'.$request->user()?->getAuthIdentifier()),
+        ]);
+        RateLimiter::for('order-return', fn (Request $request) => Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
         // Монитор-каталог есть на каждой странице (открывается и из шапки)
         View::composer('shop.partials.catalog-monitor', CatalogMonitorComposer::class);
+        View::composer('layouts.navigation', WalletComposer::class);
 
         // За прокси генерируем только https-ссылки
         if ($this->app->isProduction()) {

@@ -41,5 +41,10 @@
         @unless (request()->routeIs('control-panel.*'))
             <x-basket />
         @endunless
+
+        {{-- «Мои заказы»: открывается из меню под ником и из корзины --}}
+        @auth
+            <x-orders-window />
+        @endauth
     </body>
 </html>

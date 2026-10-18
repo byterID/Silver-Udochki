@@ -1,7 +1,12 @@
+import { send, newRequestKey } from './http';
+
 const STORAGE_KEY = 'su_cart_v1';
 
 const QUOTE_URL = '/cart/quote';
+const MAX_QTY = 999; // PriceCalculator::MAX_QTY
 const CODE_URL = '/cart/promo-code';
+const ORDERS_URL = '/orders';
+const LOGIN_URL = '/login';
 
 const isImage = (icon) => /^(\/|https?:)/.test(icon ?? '');
 
@@ -41,25 +46,6 @@ function flyToBasket(sourceEl, icon) {
     ], { duration: 700, easing: 'cubic-bezier(.45,0,.55,1)' }).onfinish = () => el.remove();
 }
 
-function csrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
-}
-
-async function send(method, url, body = null) {
-    const res = await fetch(url, {
-        method,
-        credentials: 'same-origin',
-        headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken(),
-        },
-        body: body === null ? null : JSON.stringify(body),
-    });
-    const data = res.status === 204 ? null : await res.json().catch(() => null);
-    return { ok: res.ok, status: res.status, data };
-}
-
 /**
  * Корзина хранится в localStorage, но цены в ней — только кеш для мгновенной отрисовки.
  * После каждого изменения сервер пересчитывает её (POST /cart/quote) и присылает
@@ -67,7 +53,7 @@ async function send(method, url, body = null) {
  */
 export default function registerCart(Alpine) {
     Alpine.store('cart', {
-        items: [], // { id, name, price, old_price, badge, icon, qty }; price — уже со скидкой
+        items: [], // { id, name, price, old_price, badge, icon, qty, stock }; price — уже со скидкой
         bump: 0,   // счётчик для анимации «покачивания»
 
         quote: null,   // последний ответ сервера: code, delivery
@@ -79,6 +65,12 @@ export default function registerCart(Alpine) {
         codeInput: '',
         codeError: '',
         codeBusy: false,
+
+        deliveryFee: 0,      // тариф доставки; страница подставляет его сразу, сервер присылает с расчётом
+        checkoutKey: null,   // один на попытку: повтор после обрыва сети не оформит второй заказ
+        checkoutBusy: false,
+        checkoutError: '',
+        placed: null,        // только что оформленный заказ: показываем вместо пустой корзины
 
         init() {
             this.items = this.read();
@@ -112,11 +104,30 @@ export default function registerCart(Alpine) {
         /** Изменили состав: сохранить и попросить сервер пересчитать. */
         changed() {
             this.version++;
+            this.checkoutKey = null;
+            this.checkoutError = '';
+            this.placed = null;
             this.persist();
             this.refresh();
         },
 
+        /** Сколько этого товара уже лежит в корзине. */
+        qtyOf(id) {
+            return this.items.find((i) => i.id === id)?.qty ?? 0;
+        },
+
+        /** Остаток со страницы — подсказка; окончательно количество урежет сервер. */
+        limitOf(item) {
+            return Math.min(MAX_QTY, item.stock ?? MAX_QTY);
+        },
+
+        canAdd(product) {
+            return this.qtyOf(product.id) < this.limitOf(product);
+        },
+
         add(product, sourceEl = null) {
+            if (!this.canAdd(product)) return;
+
             const found = this.items.find((i) => i.id === product.id);
             if (found) {
                 found.qty++;
@@ -128,6 +139,7 @@ export default function registerCart(Alpine) {
                     old_price: product.old_price ?? null,
                     badge: product.badge ?? null,
                     icon: product.icon,
+                    stock: product.stock ?? null,
                     qty: 1,
                 });
             }
@@ -139,7 +151,7 @@ export default function registerCart(Alpine) {
 
         inc(id) {
             const item = this.items.find((i) => i.id === id);
-            if (item && item.qty < 999) { item.qty++; this.changed(); }
+            if (item && item.qty < this.limitOf(item)) { item.qty++; this.changed(); }
         },
 
         dec(id) {
@@ -181,24 +193,73 @@ export default function registerCart(Alpine) {
             }
         },
 
-        /** Принять расчёт сервера: обновить цены и убрать то, чего больше нет. */
+        /** Принять расчёт сервера: обновить цены и остатки, убрать то, чего больше нет. */
         apply(data) {
             const fresh = new Map(data.items.map((i) => [i.id, i]));
             const missing = new Set(data.missing ?? []);
+            const notices = [];
 
             if (missing.size) {
                 this.items = this.items.filter((i) => !missing.has(i.id));
-                this.notice = 'Часть товаров закончилась, мы убрали их из корзины.';
+                notices.push('Часть товаров закончилась, мы убрали их из корзины.');
             }
+            if (data.limited?.length) {
+                notices.push('Столько нет на складе: положили, сколько осталось.');
+            }
+            if (notices.length) this.notice = notices.join(' ');
+
             for (const item of this.items) {
                 const f = fresh.get(item.id);
                 if (!f) continue;
-                Object.assign(item, { name: f.name, icon: f.icon, price: f.price, old_price: f.old_price, badge: f.badge });
+                Object.assign(item, {
+                    name: f.name, icon: f.icon, price: f.price, old_price: f.old_price, badge: f.badge,
+                    stock: f.stock, qty: f.qty,
+                });
             }
             this.persist();
 
             this.quote = data;
+            if (data.delivery_fee != null) this.deliveryFee = data.delivery_fee;
             if (data.code_error) this.codeError = data.code_error;
+        },
+
+        /* ---------- Оформление: оплата кошельком ---------- */
+
+        async checkout() {
+            if (this.checkoutBusy || this.count === 0) return;
+
+            this.checkoutBusy = true;
+            this.checkoutError = '';
+            this.checkoutKey ??= newRequestKey();
+            try {
+                // Сумма — та, что видит покупатель: если сервер насчитает другую, заказ не пройдёт
+                const { ok, status, data } = await send('POST', ORDERS_URL, {
+                    ...this.payload(), total: this.toPay, key: this.checkoutKey,
+                });
+                if (ok) {
+                    this.items = [];
+                    this.changed();
+                    this.quote = null;
+                    this.placed = data.order;
+                    window.dispatchEvent(new CustomEvent('wallet-changed', { detail: { balance: data.balance } }));
+                } else if (status === 409 && data?.quote) {
+                    this.apply(data.quote);
+                    this.checkoutError = data.message;
+                } else if (status === 401) {
+                    window.location.href = LOGIN_URL;
+                } else if (status === 419) {
+                    window.location.reload(); // сессия истекла: корзина в localStorage переживёт перезагрузку
+                } else if (status === 429) {
+                    this.checkoutError = 'Слишком много попыток. Подождите минуту.';
+                } else {
+                    this.checkoutError = data?.message ?? 'Не удалось оформить заказ. Попробуйте ещё раз.';
+                }
+            } catch {
+                // Ключ тот же: если заказ всё-таки прошёл, повтор вернёт его, а не спишет второй раз
+                this.checkoutError = 'Нет связи с лавкой. Попробуйте ещё раз, дважды не спишем.';
+            } finally {
+                this.checkoutBusy = false;
+            }
         },
 
         async applyCode() {
@@ -273,6 +334,15 @@ export default function registerCart(Alpine) {
             if (from == null) return null;
             const left = Math.max(0, from - this.total);
             return { from, left, free: this.count > 0 && left === 0, progress: from ? Math.min(1, this.total / from) : 1 };
+        },
+
+        get deliveryPrice() {
+            return this.count === 0 || this.delivery?.free ? 0 : this.deliveryFee;
+        },
+
+        /** К оплате: товары после скидок плюс доставка. */
+        get toPay() {
+            return this.total + this.deliveryPrice;
         },
 
         /** Уровень наполнения: от него зависят подсказка и «тяжесть» руки. */
