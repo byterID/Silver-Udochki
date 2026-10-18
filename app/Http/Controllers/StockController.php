@@ -66,6 +66,8 @@ class StockController extends Controller
             $movement = match ($request->reason()) {
                 StockReason::Restock => $this->stock->restock($product, $request->quantity(), $request->user(), $request->note()),
                 StockReason::Inventory => $this->stock->setCount($product, $request->quantity(), $request->user(), $request->note()),
+                // Не пропускает UpdateStockRequest: продажи проводит только оформление заказа
+                StockReason::Sale => throw new StockException('Продажа проводится только заказом.'),
             };
         } catch (StockException $e) {
             return back()->withErrors(['quantity' => $e->getMessage()]);

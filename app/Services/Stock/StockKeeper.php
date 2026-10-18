@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Stock;
 
 use App\Enums\StockReason;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -34,6 +35,17 @@ class StockKeeper
     public function setCount(Product $product, int $count, ?User $by = null, ?string $note = null): ?StockMovement
     {
         return $this->change($product, fn () => $count, StockReason::Inventory, $by, $note);
+    }
+
+    /** Продажа по заказу: остаток уменьшается на $quantity, но не ниже нуля. */
+    public function sell(Product $product, int $quantity, Order $order, ?User $buyer = null): StockMovement
+    {
+        if ($quantity < 1) {
+            throw new StockException('Продать можно не меньше одной штуки.');
+        }
+
+        /** @var StockMovement */
+        return $this->change($product, fn (int $stock) => $stock - $quantity, StockReason::Sale, $buyer, 'Заказ '.$order->number());
     }
 
     /** @param Closure(int): int $next новый остаток из текущего */

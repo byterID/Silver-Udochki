@@ -10,10 +10,14 @@ enum WalletReason: string
     /** Приветственные деньги при регистрации. */
     case Welcome = 'welcome';
 
+    /** Оплата заказа. */
+    case Purchase = 'purchase';
+
     public function label(): string
     {
         return match ($this) {
             self::Welcome => 'Подарок при регистрации',
+            self::Purchase => 'Оплата заказа',
         };
     }
 }

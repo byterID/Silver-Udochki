@@ -13,11 +13,25 @@ enum StockReason: string
     /** Пересчитали полку: остаток ставится точным числом. */
     case Inventory = 'inventory';
 
+    /** Товар ушёл покупателю по заказу. */
+    case Sale = 'sale';
+
+    /**
+     * Что можно сделать руками в панели склада. Продажи проводит только оформление заказа.
+     *
+     * @return list<self>
+     */
+    public static function manual(): array
+    {
+        return [self::Restock, self::Inventory];
+    }
+
     public function label(): string
     {
         return match ($this) {
             self::Restock => 'Поступление',
             self::Inventory => 'Инвентаризация',
+            self::Sale => 'Продажа',
         };
     }
 }

@@ -3,6 +3,8 @@ const STORAGE_KEY = 'su_cart_v1';
 const QUOTE_URL = '/cart/quote';
 const MAX_QTY = 999; // PriceCalculator::MAX_QTY
 const CODE_URL = '/cart/promo-code';
+const ORDERS_URL = '/orders';
+const LOGIN_URL = '/login';
 
 const isImage = (icon) => /^(\/|https?:)/.test(icon ?? '');
 
@@ -61,6 +63,17 @@ async function send(method, url, body = null) {
     return { ok: res.ok, status: res.status, data };
 }
 
+/** Ключ попытки оформления. randomUUID есть только в защищённом контексте (https, localhost). */
+function newCheckoutKey() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+
+    const b = window.crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 /**
  * Корзина хранится в localStorage, но цены в ней — только кеш для мгновенной отрисовки.
  * После каждого изменения сервер пересчитывает её (POST /cart/quote) и присылает
@@ -80,6 +93,12 @@ export default function registerCart(Alpine) {
         codeInput: '',
         codeError: '',
         codeBusy: false,
+
+        deliveryFee: 0,      // тариф доставки; страница подставляет его сразу, сервер присылает с расчётом
+        checkoutKey: null,   // один на попытку: повтор после обрыва сети не оформит второй заказ
+        checkoutBusy: false,
+        checkoutError: '',
+        placed: null,        // только что оформленный заказ: показываем вместо пустой корзины
 
         init() {
             this.items = this.read();
@@ -113,6 +132,9 @@ export default function registerCart(Alpine) {
         /** Изменили состав: сохранить и попросить сервер пересчитать. */
         changed() {
             this.version++;
+            this.checkoutKey = null;
+            this.checkoutError = '';
+            this.placed = null;
             this.persist();
             this.refresh();
         },
@@ -225,7 +247,47 @@ export default function registerCart(Alpine) {
             this.persist();
 
             this.quote = data;
+            if (data.delivery_fee != null) this.deliveryFee = data.delivery_fee;
             if (data.code_error) this.codeError = data.code_error;
+        },
+
+        /* ---------- Оформление: оплата кошельком ---------- */
+
+        async checkout() {
+            if (this.checkoutBusy || this.count === 0) return;
+
+            this.checkoutBusy = true;
+            this.checkoutError = '';
+            this.checkoutKey ??= newCheckoutKey();
+            try {
+                // Сумма — та, что видит покупатель: если сервер насчитает другую, заказ не пройдёт
+                const { ok, status, data } = await send('POST', ORDERS_URL, {
+                    ...this.payload(), total: this.toPay, key: this.checkoutKey,
+                });
+                if (ok) {
+                    this.items = [];
+                    this.changed();
+                    this.quote = null;
+                    this.placed = data.order;
+                    window.dispatchEvent(new CustomEvent('wallet-changed', { detail: { balance: data.balance } }));
+                } else if (status === 409 && data?.quote) {
+                    this.apply(data.quote);
+                    this.checkoutError = data.message;
+                } else if (status === 401) {
+                    window.location.href = LOGIN_URL;
+                } else if (status === 419) {
+                    window.location.reload(); // сессия истекла: корзина в localStorage переживёт перезагрузку
+                } else if (status === 429) {
+                    this.checkoutError = 'Слишком много попыток. Подождите минуту.';
+                } else {
+                    this.checkoutError = data?.message ?? 'Не удалось оформить заказ. Попробуйте ещё раз.';
+                }
+            } catch {
+                // Ключ тот же: если заказ всё-таки прошёл, повтор вернёт его, а не спишет второй раз
+                this.checkoutError = 'Нет связи с лавкой. Попробуйте ещё раз, дважды не спишем.';
+            } finally {
+                this.checkoutBusy = false;
+            }
         },
 
         async applyCode() {
@@ -300,6 +362,15 @@ export default function registerCart(Alpine) {
             if (from == null) return null;
             const left = Math.max(0, from - this.total);
             return { from, left, free: this.count > 0 && left === 0, progress: from ? Math.min(1, this.total / from) : 1 };
+        },
+
+        get deliveryPrice() {
+            return this.count === 0 || this.delivery?.free ? 0 : this.deliveryFee;
+        },
+
+        /** К оплате: товары после скидок плюс доставка. */
+        get toPay() {
+            return this.total + this.deliveryPrice;
         },
 
         /** Уровень наполнения: от него зависят подсказка и «тяжесть» руки. */
