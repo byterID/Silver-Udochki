@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Services\Pricing\PriceCalculator;
 use App\Services\ShopCatalog;
 use App\View\Composers\CatalogMonitorComposer;
+use App\View\Composers\WalletComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -49,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Монитор-каталог есть на каждой странице (открывается и из шапки)
         View::composer('shop.partials.catalog-monitor', CatalogMonitorComposer::class);
+        View::composer('layouts.navigation', WalletComposer::class);
 
         // За прокси генерируем только https-ссылки
         if ($this->app->isProduction()) {
