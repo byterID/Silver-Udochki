@@ -1,3 +1,5 @@
+import { send, newRequestKey } from './http';
+
 const STORAGE_KEY = 'su_cart_v1';
 
 const QUOTE_URL = '/cart/quote';
@@ -42,36 +44,6 @@ function flyToBasket(sourceEl, icon) {
         { transform: `translate(calc(-50% + ${dx * 0.5}px), calc(-50% + ${dy * 0.5 - 140}px)) scale(1.3)`, opacity: 1, offset: 0.5 },
         { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.6)`, opacity: 0.3 },
     ], { duration: 700, easing: 'cubic-bezier(.45,0,.55,1)' }).onfinish = () => el.remove();
-}
-
-function csrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
-}
-
-async function send(method, url, body = null) {
-    const res = await fetch(url, {
-        method,
-        credentials: 'same-origin',
-        headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken(),
-        },
-        body: body === null ? null : JSON.stringify(body),
-    });
-    const data = res.status === 204 ? null : await res.json().catch(() => null);
-    return { ok: res.ok, status: res.status, data };
-}
-
-/** Ключ попытки оформления. randomUUID есть только в защищённом контексте (https, localhost). */
-function newCheckoutKey() {
-    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
-
-    const b = window.crypto.getRandomValues(new Uint8Array(16));
-    b[6] = (b[6] & 0x0f) | 0x40;
-    b[8] = (b[8] & 0x3f) | 0x80;
-    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
-    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 /**
@@ -258,7 +230,7 @@ export default function registerCart(Alpine) {
 
             this.checkoutBusy = true;
             this.checkoutError = '';
-            this.checkoutKey ??= newCheckoutKey();
+            this.checkoutKey ??= newRequestKey();
             try {
                 // Сумма — та, что видит покупатель: если сервер насчитает другую, заказ не пройдёт
                 const { ok, status, data } = await send('POST', ORDERS_URL, {

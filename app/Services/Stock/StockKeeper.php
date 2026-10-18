@@ -48,6 +48,17 @@ class StockKeeper
         return $this->change($product, fn (int $stock) => $stock - $quantity, StockReason::Sale, $buyer, 'Заказ '.$order->number());
     }
 
+    /** Возврат по заказу: товар снова на полке, остаток растёт на $quantity. */
+    public function putBack(Product $product, int $quantity, Order $order, ?User $buyer = null): StockMovement
+    {
+        if ($quantity < 1) {
+            throw new StockException('Вернуть можно не меньше одной штуки.');
+        }
+
+        /** @var StockMovement */
+        return $this->change($product, fn (int $stock) => $stock + $quantity, StockReason::Returned, $buyer, 'Возврат по заказу '.$order->number());
+    }
+
     /** @param Closure(int): int $next новый остаток из текущего */
     private function change(Product $product, Closure $next, StockReason $reason, ?User $by, ?string $note): ?StockMovement
     {
