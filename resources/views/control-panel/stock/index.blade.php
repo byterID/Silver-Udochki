@@ -16,6 +16,20 @@
                class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50">
                 📜 Журнал движения
             </a>
+            @can(App\Enums\PermissionCode::CreateStockReport->value)
+                {{-- Отчёт собирает фоновый воркер; фильтр «мало / нет» переносится в отчёт --}}
+                <form method="POST" action="{{ route('tasks.store') }}">
+                    @csrf
+                    <input type="hidden" name="type" value="{{ App\Enums\TaskType::StockReport->value }}">
+                    @if ($state)
+                        <input type="hidden" name="payload[state]" value="{{ $state }}">
+                    @endif
+                    <button type="submit" title="{{ $state ? 'Только «'.App\Http\Controllers\StockController::STATES[$state].'»' : 'Весь склад' }}"
+                            class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700">
+                        📊 Отчёт в CSV
+                    </button>
+                </form>
+            @endcan
         </div>
     </div>
 

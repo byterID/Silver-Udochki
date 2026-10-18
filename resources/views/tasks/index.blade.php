@@ -23,6 +23,31 @@
             </button>
         </form>
 
+        @can(App\Enums\PermissionCode::CreateStockReport->value)
+            <form method="POST" action="{{ route('tasks.store') }}"
+                  class="flex flex-wrap items-end gap-4 rounded-lg bg-white p-6 shadow">
+                @csrf
+                <input type="hidden" name="type" value="{{ App\Enums\TaskType::StockReport->value }}">
+
+                <label class="block">
+                    <span class="text-sm text-gray-600">Отчёт об остатках склада</span>
+                    <select name="payload[state]"
+                            class="mt-1 block w-56 rounded-md border-gray-300 shadow-sm focus:border-emerald-600 focus:ring-emerald-600">
+                        <option value="">Весь склад</option>
+                        @foreach (App\Http\Controllers\StockController::STATES as $key => $label)
+                            <option value="{{ $key }}" @selected(old('payload.state') === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error :messages="$errors->get('payload.state')" class="mt-1" />
+                </label>
+
+                <button type="submit"
+                        class="rounded-md bg-emerald-800 px-4 py-2 font-semibold text-amber-50 hover:bg-emerald-700">
+                    Сформировать
+                </button>
+            </form>
+        @endcan
+
         <div class="overflow-hidden rounded-lg bg-white shadow">
             @forelse ($tasks as $task)
                 <a href="{{ route('tasks.show', $task) }}"
