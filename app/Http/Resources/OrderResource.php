@@ -10,7 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Заказ для окна «Мои заказы» и ответа на оформление.
+ * Заказ для окна «Мои заказы» и ответов на оформление и возврат.
+ * Заказ загружается через Order::withReturns().
  *
  * @mixin Order
  */
@@ -31,14 +32,19 @@ final class OrderResource extends JsonResource
             'promo_code' => $this->promo_code,
             'delivery_price' => $this->delivery_price,
             'total' => $this->total,
-            'items' => $this->whenLoaded('items', fn () => $this->items->map(fn (OrderItem $item) => [
+            'refunded' => $this->refundedAmount(),
+            'returnable' => $this->isReturnable(),
+            'return_until' => $this->returnDeadline()->toIso8601String(),
+            'items' => $this->items->map(fn (OrderItem $item) => [
+                'id' => $item->id,
                 'name' => $item->name,
                 'sku' => $item->sku,
                 'qty' => $item->quantity,
-                'price' => $item->unit_price - $item->unit_discount,
+                'returned' => $item->returnedQuantity(),
+                'price' => $item->unitTotal(),
                 'old_price' => $item->unit_discount > 0 ? $item->unit_price : null,
                 'total' => $item->lineTotal(),
-            ])->all()),
+            ])->all(),
         ];
     }
 }

@@ -13,11 +13,15 @@ enum WalletReason: string
     /** Оплата заказа. */
     case Purchase = 'purchase';
 
+    /** Деньги за возвращённые товары. */
+    case Refund = 'refund';
+
     public function label(): string
     {
         return match ($this) {
             self::Welcome => 'Подарок при регистрации',
             self::Purchase => 'Оплата заказа',
+            self::Refund => 'Возврат по заказу',
         };
     }
 }

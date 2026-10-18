@@ -17,6 +17,12 @@ enum OrderStatus: string
     case Completed = 'completed';
     case Cancelled = 'cancelled';
 
+    /** Часть товаров вернули, остальное можно вернуть позже. */
+    case PartiallyRefunded = 'partially_refunded';
+
+    /** Вернули всё: деньги и доставка на кошельке. */
+    case Refunded = 'refunded';
+
     public function label(): string
     {
         return match ($this) {
@@ -26,6 +32,14 @@ enum OrderStatus: string
             self::Shipped => 'Передан в доставку',
             self::Completed => 'Выполнен',
             self::Cancelled => 'Отменён',
+            self::PartiallyRefunded => 'Частичный возврат',
+            self::Refunded => 'Возвращён',
         };
+    }
+
+    /** Оплаченный заказ, по которому ещё можно оформить возврат. */
+    public function isRefundable(): bool
+    {
+        return in_array($this, [self::Paid, self::Confirmed, self::Shipped, self::Completed, self::PartiallyRefunded], true);
     }
 }

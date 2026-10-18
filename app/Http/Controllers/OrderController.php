@@ -27,7 +27,7 @@ class OrderController extends Controller
 
         $orders = Order::query()
             ->whereBelongsTo($user)
-            ->with('items')
+            ->withReturns()
             ->latest('id')
             ->limit(self::HISTORY_LIMIT)
             ->get();
@@ -69,7 +69,7 @@ class OrderController extends Controller
         $session->forget(CartController::SESSION_KEY);
 
         return response()->json([
-            'order' => new OrderResource($order->load('items')),
+            'order' => new OrderResource(Order::query()->withReturns()->findOrFail($order->id)),
             'balance' => $wallets->walletOf($user)->balance,
         ], $order->wasRecentlyCreated ? 201 : 200);
     }
