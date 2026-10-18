@@ -44,6 +44,14 @@
                     </div>
                 </div>
 
+                @can('viewAny', App\Models\Promotion::class)
+                    <a href="{{ route('control-panel.promotions.index') }}"
+                       class="rounded-lg px-3 py-2 text-sm font-medium transition
+              {{ request()->routeIs('control-panel.promotions.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100' }}">
+                        🏷️ Акции
+                    </a>
+                @endcan
+
             </nav>
         </aside>
 

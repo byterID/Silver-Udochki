@@ -10,6 +10,10 @@ enum PermissionCode: string
     case ManageUsers = 'manage_users';
     case ManageAccess = 'manage_access';
     case ExportUsers = 'export_users';
+    case ViewPromotions = 'view_promotions';
+    case CreatePromotions = 'create_promotions';
+    case UpdatePromotions = 'update_promotions';
+    case DeletePromotions = 'delete_promotions';
 
     public function title(): string
     {
@@ -18,6 +22,10 @@ enum PermissionCode: string
             self::ManageUsers => 'Управление пользователями',
             self::ManageAccess => 'Настройка прав и ролей',
             self::ExportUsers => 'Выгрузка пользователей',
+            self::ViewPromotions => 'Просмотр акций',
+            self::CreatePromotions => 'Создание акций',
+            self::UpdatePromotions => 'Изменение акций',
+            self::DeletePromotions => 'Удаление акций',
         };
     }
 
@@ -26,6 +34,8 @@ enum PermissionCode: string
         return match ($this) {
             self::AccessControlPanel, self::ManageAccess => 'Администрирование',
             self::ManageUsers, self::ExportUsers => 'Пользователи',
+            self::ViewPromotions, self::CreatePromotions,
+            self::UpdatePromotions, self::DeletePromotions => 'Акции',
         };
     }
 

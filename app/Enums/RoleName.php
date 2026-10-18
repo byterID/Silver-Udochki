@@ -46,6 +46,10 @@ enum RoleName: string
             self::Manager => [
                 PermissionCode::AccessControlPanel->value,
                 PermissionCode::ManageUsers->value,
+                PermissionCode::ViewPromotions->value,
+                PermissionCode::CreatePromotions->value,
+                PermissionCode::UpdatePromotions->value,
+                PermissionCode::DeletePromotions->value,
             ],
             self::User, self::Guest => [],
         };
