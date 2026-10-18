@@ -82,7 +82,7 @@
     --seller-x: 36%;  --seller-y: 7.9%; --seller-w: 22%;
     --seller-tilt: 0deg;
     --stand-x: 17%;    --stand-y: 44%;   --stand-w: 22%;
-    --bell-x: 80%;     --bell-y: 49%;
+    --bell-x: 80%;     --bell-y: 46.5%;
 
     position: relative;
     width: 100%;
@@ -145,7 +145,7 @@
 .shop-scene__bell {
     position: absolute; left: var(--bell-x); top: var(--bell-y);
     font-size: max(1.6rem, 3.4cqw); line-height: 1;
-    filter: drop-shadow(0 4px 3px rgba(0,0,0,.45));
+    filter: drop-shadow(0 2px 1.5px rgba(0,0,0,.25));
     transition: transform .2s;
 }
 .shop-scene__bell:hover { transform: rotate(-12deg); }

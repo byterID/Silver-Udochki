@@ -114,16 +114,16 @@
                                 @endif
                             </div>
 
-                            <x-dropdown-link :href="route('game.index')">🦆 Заработать на охоте</x-dropdown-link>
                             <button type="button" @click="$dispatch('orders-open')"
                                     class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none">
                                 Мои заказы
                             </button>
-                            <x-dropdown-link :href="route('tasks.index')">Мои задачи</x-dropdown-link>
-                            <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
+                            <x-dropdown-link :href="route('tasks.index')">Задачи</x-dropdown-link>
+                            <x-dropdown-link :href="route('game.index')">🦆 Заработать на охоте</x-dropdown-link>
+                            <x-dropdown-link :href="route('profile.edit')">Профиль</x-dropdown-link>
 
                             @can('access_control_panel')
-                                <x-dropdown-link :href="route('control-panel.index')">{{ __('Control panel') }}</x-dropdown-link>
+                                <x-dropdown-link :href="route('control-panel.index')">Панель управления</x-dropdown-link>
                             @endcan
                         @else
                             <x-dropdown-link :href="route('login')">Войти</x-dropdown-link>
@@ -141,7 +141,7 @@
                                 @csrf
                                 <x-dropdown-link :href="route('logout')"
                                         onclick="event.preventDefault(); this.closest('form').submit();">
-                                    {{ __('Log Out') }}
+                                    Выйти
                                 </x-dropdown-link>
                             </form>
                         @endauth
