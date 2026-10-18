@@ -1,3 +1,4 @@
+const HOUR = 3_600_000;
 const DAY = 86_400_000;
 
 export function plural(n, [one, few, many]) {
@@ -10,6 +11,35 @@ export function plural(n, [one, few, many]) {
 }
 
 const pad = (x) => String(x).padStart(2, '0');
+
+/**
+ * Насколько близок конец акции: от этого зависит вид на доске (классы promo-stage-* в app.css).
+ * soon — меньше 3 дней, ending — последние сутки, burning — последний час.
+ */
+export function promoStage(ends, now = Date.now()) {
+    if (!ends) return 'calm';
+    const ms = ends - now;
+    if (ms <= 0) return 'over';
+    if (ms < HOUR) return 'burning';
+    if (ms < DAY) return 'ending';
+    if (ms < 3 * DAY) return 'soon';
+    return 'calm';
+}
+
+export const STAGE_LABELS = {
+    ending: '🔥 Последний день!',
+    burning: '⏰ Последний час!',
+};
+
+export function timeLeft(ends, now = Date.now()) {
+    const ms = Math.max(0, ends - now);
+    const d = Math.floor(ms / DAY);
+    const h = Math.floor((ms % DAY) / HOUR);
+    if (d >= 1) return `ещё ${d} ${plural(d, ['день', 'дня', 'дней'])} ${h} ч`;
+    const m = Math.floor((ms % HOUR) / 60_000);
+    const s = Math.floor((ms % 60_000) / 1000);
+    return `осталось ${pad(h)}:${pad(m)}:${pad(s)}`;
+}
 
 /** Доска акций: листает предложения, считает время до конца, прячет истёкшие. */
 export default function registerPromoBoard(Alpine) {
@@ -54,13 +84,15 @@ export default function registerPromoBoard(Alpine) {
         },
 
         left(p) {
-            const ms = Math.max(0, p.ends - this.now);
-            const d = Math.floor(ms / DAY);
-            const h = Math.floor((ms % DAY) / 3_600_000);
-            if (d >= 1) return `ещё ${d} ${plural(d, ['день', 'дня', 'дней'])} ${h} ч`;
-            const m = Math.floor((ms % 3_600_000) / 60_000);
-            const s = Math.floor((ms % 60_000) / 1000);
-            return `осталось ${pad(h)}:${pad(m)}:${pad(s)}`;
+            return timeLeft(p.ends, this.now);
+        },
+
+        stage(p) {
+            return promoStage(p.ends, this.now);
+        },
+
+        stageLabel(p) {
+            return STAGE_LABELS[this.stage(p)] ?? '';
         },
     }));
 }
