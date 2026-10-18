@@ -49,6 +49,11 @@ class AppServiceProvider extends ServiceProvider
         ]);
         // Оформление: повторы с тем же ключом безопасны, но долбить сервер незачем
         RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
+        // Раунд идёт минуту, так что честному игроку хватит с запасом; чаще — это перебор раскладок
+        RateLimiter::for('game-start', fn (Request $request) => [
+            Limit::perMinute(6)->by('minute:'.$request->user()?->getAuthIdentifier()),
+            Limit::perHour(90)->by('hour:'.$request->user()?->getAuthIdentifier()),
+        ]);
         RateLimiter::for('order-return', fn (Request $request) => Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
         // Монитор-каталог есть на каждой странице (открывается и из шапки)

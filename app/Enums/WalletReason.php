@@ -16,12 +16,16 @@ enum WalletReason: string
     /** Деньги за возвращённые товары. */
     case Refund = 'refund';
 
+    /** Награда за мини-игру: единственный способ заработать. */
+    case Game = 'game';
+
     public function label(): string
     {
         return match ($this) {
             self::Welcome => 'Подарок при регистрации',
             self::Purchase => 'Оплата заказа',
             self::Refund => 'Возврат по заказу',
+            self::Game => 'Награда за охоту',
         };
     }
 }
