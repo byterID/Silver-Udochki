@@ -16,6 +16,7 @@ enum PermissionCode: string
     case DeletePromotions = 'delete_promotions';
     case ViewStock = 'view_stock';
     case UpdateStock = 'update_stock';
+    case CreateStockReport = 'create_stock_report';
 
     public function title(): string
     {
@@ -30,6 +31,7 @@ enum PermissionCode: string
             self::DeletePromotions => 'Удаление акций',
             self::ViewStock => 'Просмотр склада',
             self::UpdateStock => 'Изменение остатков',
+            self::CreateStockReport => 'Выгрузка отчёта об остатках',
         };
     }
 
@@ -41,6 +43,8 @@ enum PermissionCode: string
             self::ViewPromotions, self::CreatePromotions,
             self::UpdatePromotions, self::DeletePromotions => 'Акции',
             self::ViewStock, self::UpdateStock => 'Склад',
+            // Отдельная группа: отчёт можно выдать роли, не открывая ей склад
+            self::CreateStockReport => 'Создание отчёта остатков',
         };
     }
 

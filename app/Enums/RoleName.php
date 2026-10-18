@@ -52,6 +52,7 @@ enum RoleName: string
                 PermissionCode::DeletePromotions->value,
                 PermissionCode::ViewStock->value,
                 PermissionCode::UpdateStock->value,
+                PermissionCode::CreateStockReport->value,
             ],
             self::User, self::Guest => [],
         };
