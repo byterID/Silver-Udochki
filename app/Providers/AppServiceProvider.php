@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Services\Pricing\PriceCalculator;
+use App\Services\ShopCatalog;
 use App\View\Composers\CatalogMonitorComposer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
@@ -15,7 +17,10 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Один экземпляр на запрос: акции и каталог загружаются один раз,
+        // а контроллер и композер монитора видят одни и те же данные
+        $this->app->scoped(PriceCalculator::class);
+        $this->app->scoped(ShopCatalog::class);
     }
 
     public function boot(): void

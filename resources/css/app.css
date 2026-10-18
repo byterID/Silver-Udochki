@@ -108,6 +108,31 @@
     box-shadow: 0 0 0 4px #fde047, 0 0 30px 8px rgba(253,224,71,.45);
 }
 .chalk { text-shadow: 0 0 1px rgba(255,255,255,.7), 0 0 8px rgba(255,255,255,.18); }
+
+/* Акция скоро закончится (стадии считает promoStage в promo-board.js) */
+.promo-alarm { display: none; }
+.promo-stage-soon .promo-timer { color: #fdba74; }
+.promo-stage-ending .promo-timer,
+.promo-stage-burning .promo-timer { color: #fca5a5; font-weight: 700; }
+.promo-stage-ending .promo-alarm,
+.promo-stage-burning .promo-alarm { display: block; color: #fecaca; letter-spacing: .04em; }
+.promo-stage-ending .promo-title { animation: promo-pulse 2.4s ease-in-out infinite; }
+.promo-stage-burning .promo-title { animation: promo-pulse .9s ease-in-out infinite, promo-flicker 3s steps(1) infinite; }
+.promo-stage-burning .promo-alarm { animation: promo-pulse .9s ease-in-out infinite; }
+@keyframes promo-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+/* Мел «искрит»: на долю секунды буквы светятся ярче */
+@keyframes promo-flicker {
+    0%, 100% { text-shadow: 0 0 1px rgba(255,255,255,.7), 0 0 8px rgba(255,255,255,.18); }
+    92% { text-shadow: 0 0 2px #fff, 0 0 14px rgba(252,165,165,.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .promo-stage-ending .promo-title,
+    .promo-stage-burning .promo-title,
+    .promo-stage-burning .promo-alarm { animation: none; }
+}
 .promo-mobile { display: flex; }
 
 .shop-scene__seller {
