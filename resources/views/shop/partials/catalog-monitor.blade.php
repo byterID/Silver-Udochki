@@ -97,8 +97,15 @@
                                                             <span class="text-3xl" x-text="p.icon"></span>
                                                         </template>
                                                     </span>
-                                                    <span class="min-w-0 flex-1 leading-snug" x-text="p.name"></span>
-                                                    <span class="shrink-0 font-semibold text-[#2f4a3a]" x-text="$store.cart.money(p.price)"></span>
+                                                    <span class="min-w-0 flex-1 leading-snug">
+                                                        <span x-text="p.name"></span>
+                                                        <span x-show="p.badge" class="ml-1 whitespace-nowrap rounded px-1.5 text-xs font-bold text-stone-900 ring-1 ring-black/10"
+                                                              :style="{ background: p.color }" x-text="p.badge"></span>
+                                                    </span>
+                                                    <span class="flex shrink-0 flex-col items-end leading-tight">
+                                                        <s x-show="p.old_price" class="text-xs text-stone-500" x-text="$store.cart.money(p.old_price)"></s>
+                                                        <span class="font-semibold" :class="p.old_price ? 'text-red-800' : 'text-[#2f4a3a]'" x-text="$store.cart.money(p.price)"></span>
+                                                    </span>
                                                     <button type="button" class="pc-btn shrink-0" @click="$store.cart.add(p, $el)">
                                                         <span class="hidden sm:inline">В корзину</span><span class="sm:hidden">＋</span>
                                                     </button>

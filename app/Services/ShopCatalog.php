@@ -5,13 +5,20 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Chapter;
-use Illuminate\Support\Carbon;
+use App\Models\Product;
+use App\Models\Promotion;
+use App\Services\Pricing\PriceCalculator;
 
-/** Каталог лавки: главы, категории и товары из БД, акции из config/shop.php. */
+/** Каталог лавки и доска акций: всё из БД, цены — через PriceCalculator. */
 class ShopCatalog
 {
     /** @var array{chapters: array<string, array<string, mixed>>, categories: array<string, array<string, mixed>>}|null */
     private ?array $catalog = null;
+
+    /** @var list<array{id: int, title: string, note: string|null, color: string, ends: int|null}>|null */
+    private ?array $promos = null;
+
+    public function __construct(private readonly PriceCalculator $prices) {}
 
     public function firstChapter(): ?string
     {
@@ -19,31 +26,49 @@ class ShopCatalog
     }
 
     /**
-     * Только акции, которые действуют прямо сейчас. ends — метка в мс для таймера в браузере.
+     * Акции, которые действуют прямо сейчас: сначала те, что скоро закончатся.
+     * ends — метка в мс для таймера в браузере.
      *
-     * @return array<int, array{title: mixed, note: mixed, ends: int|null}>
+     * @return list<array{id: int, title: string, note: string|null, color: string, ends: int|null}>
      */
     public function activePromos(): array
     {
-        $now = now();
-
-        /** @var array<int, array<string, mixed>> $promos */
-        $promos = config('shop.promos', []);
-
-        return collect($promos)
-            ->filter(function (array $p) use ($now): bool {
-                $starts = isset($p['starts_at']) ? Carbon::parse($p['starts_at']) : null;
-                $ends = isset($p['ends_at']) ? Carbon::parse($p['ends_at']) : null;
-
-                return (! $starts || $starts->lte($now)) && (! $ends || $ends->gt($now));
-            })
-            ->map(fn (array $p) => [
-                'title' => $p['title'],
-                'note' => $p['note'] ?? null,
-                'ends' => isset($p['ends_at']) ? Carbon::parse($p['ends_at'])->getTimestampMs() : null,
+        return $this->promos ??= Promotion::query()
+            ->available()
+            ->orderByRaw('ends_at is null')
+            ->orderBy('ends_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Promotion $p) => [
+                'id' => $p->id,
+                'title' => $p->title,
+                'note' => $p->note,
+                'color' => $p->color,
+                'ends' => $p->ends_at?->getTimestampMs(),
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Товар для витрины, карточки и корзины: цена уже со скидкой, old_price — до неё.
+     *
+     * @return array{id: int, name: string, icon: string, price: int, old_price: int|null, badge: string|null, color: string|null}
+     */
+    public function presentProduct(Product $product, ?string $fallbackIcon = null): array
+    {
+        $price = $this->prices->priceFor($product);
+        $promotion = $price->hasDiscount() ? $price->promotion : null;
+
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'icon' => $product->icon ?: (string) $fallbackIcon,
+            'price' => $price->final,
+            'old_price' => $promotion ? $price->base : null,
+            'badge' => $promotion?->benefit(),
+            'color' => $promotion?->color,
+        ];
     }
 
     /**
@@ -80,12 +105,7 @@ class ShopCatalog
                     'products' => $category->products
                         ->where('is_active', true)
                         ->sortBy('id')
-                        ->map(fn ($p) => [
-                            'id' => $p->id,
-                            'name' => $p->name,
-                            'price' => $p->price,
-                            'icon' => $p->icon ?: $category->icon,
-                        ])
+                        ->map(fn (Product $p) => $this->presentProduct($p, $category->icon))
                         ->values()
                         ->all(),
                 ];
