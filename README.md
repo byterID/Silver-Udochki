@@ -11,7 +11,7 @@
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-4.1%20KRaft-231F20?logo=apachekafka&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-[Сайт](https://silver-udochki.ru) · [Архитектура](#-архитектура) · [Быстрый старт](#-быстрый-старт) · [Мониторинг](#-мониторинг) · [CI/CD](#-cicd) · [Документация](https://github.com/byterID/Silver-Udochki/tree/orphan/docs)
+[Сайт](https://silver-udochki.ru) · [Архитектура](#схема-архитектуры) · [Быстрый старт](#быстрый-запуск) · [Мониторинг](#как-устроен-мониторинг) · [CI/CD](#схема-cicd) · [Документация](https://github.com/byterID/Silver-Udochki/tree/orphan/docs)
 
 </div>
 
