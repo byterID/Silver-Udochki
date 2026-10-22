@@ -13,7 +13,7 @@ export default function registerShopFront(Alpine) {
             this.say(`${cfg.greeting} ${this.pickQuestion()}`);
         },
 
-        /** Случайный вопрос, но не такой же, как в прошлый раз. */
+        // Случайный вопрос, но не тот же, что в прошлый визит
         pickQuestion() {
             const list = cfg.questions ?? [];
             if (list.length === 0) return 'Чем помочь?';
@@ -28,7 +28,6 @@ export default function registerShopFront(Alpine) {
             return list[i];
         },
 
-        /** Эффект печатной машинки. */
         say(text) {
             clearInterval(this.timer);
             this.fullText = text;
@@ -85,21 +84,12 @@ export default function registerShopFront(Alpine) {
             }
         },
 
-        /* ---------- Монитор-каталог (живёт в layouts/app) ---------- */
-
         openCatalog(chapter = null) {
             this.$dispatch('catalog-open', {
                 chapter,
                 from: this.$refs.catalogStand ?? null,
             });
         },
-
-        // Старое имя, чтобы ничего не сломалось
-        openBook(chapter = null) {
-            this.openCatalog(chapter);
-        },
-
-        /* ---------- Прочее ---------- */
 
         flashPromo() {
             this.promoFlash = true;
@@ -122,7 +112,7 @@ export default function registerShopFront(Alpine) {
             }, 800);
         },
 
-        /** Клавиши 1–5 выбирают ответ. Esc обрабатывает сам монитор. */
+        // Клавиши 1–5 выбирают ответ, Esc обрабатывает сам монитор
         hotkey(e) {
             if (this.$store.catalogMonitor.open || e.ctrlKey || e.metaKey || e.altKey) return;
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;

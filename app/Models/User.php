@@ -6,9 +6,6 @@ namespace App\Models;
 
 use App\Enums\RoleName;
 use Database\Factories\UserFactory;
-// Подтверждение email временно отключено.
-// Чтобы включить: раскомментируйте строку ниже и добавьте "implements MustVerifyEmail" к классу.
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -41,19 +38,11 @@ class User extends Authenticatable
             ->max();
     }
 
-    public function primaryRole(): ?RoleName
-    {
-        $name = $this->roles->pluck('name')->first();
-
-        return $name === null ? null : RoleName::tryFrom($name);
-    }
-
     public function isSuperAdmin(): bool
     {
         return $this->hasRole(config('access.super_role'));
     }
 
-    // app/Models/User.php
     /** @return HasMany<Task, $this> */
     public function tasks(): HasMany
     {
@@ -66,11 +55,8 @@ class User extends Authenticatable
         return $this->hasMany(GameRound::class);
     }
 
-    /**
-     * Может ещё не быть: кошелёк открывает WalletKeeper::walletOf().
-     *
-     * @return HasOne<Wallet, $this>
-     */
+    // Может ещё не быть: кошелёк открывает WalletKeeper::walletOf()
+    /** @return HasOne<Wallet, $this> */
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class);
