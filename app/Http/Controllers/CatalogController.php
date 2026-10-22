@@ -7,15 +7,14 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\ShopCatalog;
+use App\Support\SearchTerm;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CatalogController extends Controller
 {
     public function __construct(private readonly ShopCatalog $shop) {}
 
-    /** Главная: лавка с продавцом. Каталог для монитора отдаёт CatalogMonitorComposer. */
     public function home(Request $request): View
     {
         $user = $request->user();
@@ -50,15 +49,14 @@ class CatalogController extends Controller
 
     public function search(Request $request): View
     {
-        $raw = $request->query('q');
-        $query = Str::limit(trim(is_string($raw) ? $raw : ''), 100, '');
+        $query = SearchTerm::from($request->query('q'));
         $words = $this->searchWords($query);
 
         $products = collect();
         $matchedCategories = [];
 
         if ($words !== []) {
-            // Отбор в PHP: SQLite (тесты) не умеет lower() для кириллицы.
+            // Отбор в PHP: SQLite в тестах не делает lower() для кириллицы
             $products = Product::query()
                 ->active()
                 ->with('category')
@@ -99,11 +97,8 @@ class CatalogController extends Controller
         return str_replace('ё', 'е', mb_strtolower($text));
     }
 
-    /**
-     * Простейший «стемминг»: срезаем окончания, чтобы «блесну», «блёсны» и «блесна» совпадали.
-     *
-     * @return list<string>
-     */
+    // Грубый стемминг: срезаем окончания, чтобы «блесну», «блёсны» и «блесна» совпадали
+    /** @return list<string> */
     private function searchWords(string $query): array
     {
         $words = preg_split('/[^\p{L}\p{N}]+/u', $this->normalize($query), -1, PREG_SPLIT_NO_EMPTY) ?: [];

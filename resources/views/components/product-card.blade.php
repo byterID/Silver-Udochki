@@ -3,7 +3,7 @@
 
 @php
     $isImage = str_starts_with($product['icon'], '/') || str_starts_with($product['icon'], 'http');
-    $money = fn (int $v) => number_format($v, 0, ',', ' ').' ₽';
+    $money = App\Support\Money::format(...);
 @endphp
 
 <article x-data class="group relative flex flex-col overflow-hidden rounded-lg border-4 border-amber-900 bg-[#f3e7c9] shadow-[0_6px_0_rgba(0,0,0,.35)]">

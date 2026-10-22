@@ -8,9 +8,6 @@ use App\Models\Task;
 
 interface TaskRunner
 {
-    /**
-     * Выполняет задачу и возвращает путь к результату на диске 'local'.
-     * Любая ошибка — исключение: воркер сам пометит задачу как failed.
-     */
+    // Возвращает путь к результату на диске local. Исключение — задача failed
     public function run(Task $task): string;
 }

@@ -34,8 +34,8 @@
                     <select name="payload[state]"
                             class="mt-1 block w-56 rounded-md border-gray-300 shadow-sm focus:border-emerald-600 focus:ring-emerald-600">
                         <option value="">Весь склад</option>
-                        @foreach (App\Http\Controllers\StockController::STATES as $key => $label)
-                            <option value="{{ $key }}" @selected(old('payload.state') === $key)>{{ $label }}</option>
+                        @foreach (App\Enums\StockState::cases() as $state)
+                            <option value="{{ $state->value }}" @selected(old('payload.state') === $state->value)>{{ $state->label() }}</option>
                         @endforeach
                     </select>
                     <x-input-error :messages="$errors->get('payload.state')" class="mt-1" />

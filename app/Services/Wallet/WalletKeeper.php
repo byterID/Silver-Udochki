@@ -8,31 +8,25 @@ use App\Enums\WalletReason;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Единственное место, где меняется wallets.balance. Каждое изменение —
- * строка в журнале wallet_transactions с суммой и балансом после неё.
- */
+// Единственное место, где меняется wallets.balance: каждое изменение пишется в wallet_transactions
 class WalletKeeper
 {
     public const MAX_BALANCE = 100_000_000;
 
     public const WELCOME_REFERENCE = 'welcome';
 
-    /**
-     * Кошелёк пользователя. Если его ещё нет (зарегистрировался, пока выкладывалась
-     * новая версия, или создан командой), он открывается с приветственными деньгами.
-     */
+    // Кошелька может не быть (пользователь создан командой или во время выкладки): тогда открываем
     public function walletOf(User $user): Wallet
     {
         return $user->wallet ?? $this->open($user);
     }
 
-    /** Открывает кошелёк и начисляет приветственные деньги. Повторный вызов ничего не начисляет. */
     public function open(User $user): Wallet
     {
-        // Две одновременные первые страницы не создадут два кошелька: user_id уникален
+        // insertOrIgnore по уникальному user_id: параллельные первые запросы не создадут два кошелька
         Wallet::query()->insertOrIgnore([
             'user_id' => $user->id,
             'balance' => 0,
@@ -51,7 +45,7 @@ class WalletKeeper
         return $wallet;
     }
 
-    /** Начисление. С $reference повторный вызов вернёт прежнюю операцию и не начислит второй раз. */
+    // С $reference операция идемпотентна: повтор вернёт прежнюю запись
     public function credit(User $user, int $amount, WalletReason $reason, ?string $reference = null, ?string $note = null): WalletTransaction
     {
         if ($amount < 1) {
@@ -61,7 +55,6 @@ class WalletKeeper
         return $this->change($user, $amount, $reason, $reference, $note);
     }
 
-    /** Списание. Уйти в минус нельзя. С $reference повторный вызов не спишет второй раз. */
     public function debit(User $user, int $amount, WalletReason $reason, ?string $reference = null, ?string $note = null): WalletTransaction
     {
         if ($amount < 1) {
@@ -77,12 +70,10 @@ class WalletKeeper
         $balance = $wallet->balance;
 
         $transaction = DB::transaction(function () use ($wallet, $delta, $reason, $reference, $note, &$balance): WalletTransaction {
-            // Блокировка строки: два одновременных списания не уведут баланс в минус,
-            // а баланс считается от свежего значения, а не от того, что в $wallet
+            // Баланс и повтор по $reference проверяются под блокировкой строки кошелька
             $locked = Wallet::query()->lockForUpdate()->findOrFail($wallet->id);
             $balance = $locked->balance;
 
-            // Проверка под блокировкой, поэтому две одинаковые операции не пройдут обе
             if ($reference !== null) {
                 $done = $locked->transactions()->where('reference', $reference)->first();
                 if ($done !== null) {
@@ -92,10 +83,10 @@ class WalletKeeper
 
             $after = $locked->balance + $delta;
             if ($after < 0) {
-                throw new WalletException('Недостаточно денег: на счёте '.self::money($locked->balance).', нужно '.self::money(-$delta).'.');
+                throw new WalletException('Недостаточно денег: на счёте '.Money::format($locked->balance).', нужно '.Money::format(-$delta).'.');
             }
             if ($after > self::MAX_BALANCE) {
-                throw new WalletException('Слишком большой баланс: не больше '.self::money(self::MAX_BALANCE).'.');
+                throw new WalletException('Слишком большой баланс: не больше '.Money::format(self::MAX_BALANCE).'.');
             }
 
             $locked->update(['balance' => $after]);
@@ -115,10 +106,5 @@ class WalletKeeper
         $wallet->syncOriginalAttribute('balance');
 
         return $transaction;
-    }
-
-    private static function money(int $amount): string
-    {
-        return number_format($amount, 0, ',', ' ').' ₽';
     }
 }

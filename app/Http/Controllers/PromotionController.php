@@ -9,13 +9,13 @@ use App\Http\Requests\ControlPanel\StorePromotionRequest;
 use App\Http\Requests\ControlPanel\UpdatePromotionRequest;
 use App\Models\Product;
 use App\Models\Promotion;
+use App\Support\SearchTerm;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class PromotionController extends Controller
 {
@@ -97,17 +97,12 @@ class PromotionController extends Controller
             ->with('status', "Акция «{$promotion->title}» удалена");
     }
 
-    /**
-     * Поиск товаров для формы: по названию, артикулу и разделу.
-     * ?except=<id акции> — товары этой акции не считаются занятыми.
-     */
+    // ?except=<id акции>: её собственные товары не считаются занятыми
     public function products(Request $request): JsonResponse
     {
         $this->authorize('pickProducts', Promotion::class);
 
-        $raw = $request->query('q');
-        // % и _ выкидываем: у LIKE в SQLite нет экранирования по умолчанию
-        $query = Str::limit(trim(str_replace(['%', '_'], '', is_string($raw) ? $raw : '')), 100, '');
+        $query = SearchTerm::from($request->query('q'));
         $except = (int) $request->query('except');
 
         if (mb_strlen($query) < 2) {
@@ -135,10 +130,8 @@ class PromotionController extends Controller
         ]);
     }
 
+    // После ошибки валидации выбор берём из old(), иначе он пропадёт
     /**
-     * Выбранные товары для формы. После ошибки валидации берём их из old(),
-     * иначе выбор пропал бы вместе с перезагрузкой страницы.
-     *
      * @return list<array{id: int, name: string, sku: string, price: int, category: string, active: bool, taken: string|null}>
      */
     private function selectedRows(?Promotion $promotion): array

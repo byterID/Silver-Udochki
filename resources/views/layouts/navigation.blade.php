@@ -3,7 +3,6 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 items-center gap-2 sm:gap-4">
 
-            {{-- Логотип → главная --}}
             <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2 text-amber-50" aria-label="На главную">
                 <span class="text-2xl leading-none" aria-hidden="true">🎣</span>
                 <span class="hidden text-lg font-semibold tracking-wide md:inline">Silver Udochki</span>
@@ -20,7 +19,6 @@
                 <span class="hidden sm:inline">Каталог</span>
             </button>
 
-            {{-- Поиск (планшет и ПК) --}}
             <form action="{{ route('catalog.search') }}" method="GET" role="search" class="hidden flex-1 sm:flex">
                 <div class="flex w-full overflow-hidden rounded-lg border-2 border-amber-700 bg-white focus-within:border-amber-500">
                     <input type="search" name="q" value="{{ request()->routeIs('catalog.search') ? request('q') : '' }}"
@@ -35,7 +33,6 @@
             </form>
 
             <div class="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:gap-2">
-                {{-- Поиск (телефон) --}}
                 <button type="button" @click="mobileSearch = !mobileSearch"
                         class="rounded-full p-2 text-amber-100 transition hover:bg-emerald-800 sm:hidden" aria-label="Поиск">
                     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -47,9 +44,8 @@
                     <x-notification-bell />
                 @endauth
 
-                @php($money = fn (int $v) => number_format($v, 0, ',', ' ').' ₽')
+                @php($money = App\Support\Money::format(...))
 
-                {{-- Профиль --}}
                 <x-dropdown align="right" width="w-72">
                     <x-slot name="trigger">
                         <button type="button"
@@ -82,7 +78,6 @@
                                 <div class="truncate text-xs text-gray-500">{{ Auth::user()->email }}</div>
                             </div>
 
-                            {{-- Кошелёк: баланс и последние операции --}}
                             <div class="border-b border-gray-100 px-4 py-2">
                                 <div class="flex items-baseline justify-between gap-2">
                                     <span class="text-xs text-gray-500">Баланс</span>
@@ -150,7 +145,6 @@
             </div>
         </div>
 
-        {{-- Поиск (телефон), раскрывается по лупе --}}
         <form x-show="mobileSearch" x-cloak action="{{ route('catalog.search') }}" method="GET" role="search" class="pb-3 sm:hidden">
             <input type="search" name="q" maxlength="100" placeholder="Поиск по лавке…"
                    x-effect="mobileSearch && $nextTick(() => $el.focus())"
