@@ -9,7 +9,6 @@ use App\Models\User;
 
 class OrderPolicy
 {
-    /** Возврат оформляет только сам покупатель. Сроки и статус проверяет OrderRefunder. */
     public function refund(User $user, Order $order): bool
     {
         return $order->user_id === $user->id;

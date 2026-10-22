@@ -3,7 +3,7 @@
 @section('panel-content')
     @php
         $canUpdate = auth()->user()->can('create', App\Models\StockMovement::class);
-        $money = fn (int $v) => number_format($v, 0, ',', ' ').' ₽';
+        $money = App\Support\Money::format(...);
     @endphp
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -22,9 +22,9 @@
                     @csrf
                     <input type="hidden" name="type" value="{{ App\Enums\TaskType::StockReport->value }}">
                     @if ($state)
-                        <input type="hidden" name="payload[state]" value="{{ $state }}">
+                        <input type="hidden" name="payload[state]" value="{{ $state->value }}">
                     @endif
-                    <button type="submit" title="{{ $state ? 'Только «'.App\Http\Controllers\StockController::STATES[$state].'»' : 'Весь склад' }}"
+                    <button type="submit" title="{{ $state ? 'Только «'.$state->label().'»' : 'Весь склад' }}"
                             class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700">
                         📊 Отчёт в CSV
                     </button>
@@ -45,11 +45,10 @@
         </div>
     @endif
 
-    {{-- Поиск и фильтр --}}
     <div class="mb-4 flex flex-wrap items-center gap-3">
         <form method="GET" action="{{ route('control-panel.stock.index') }}" class="flex gap-2">
             @if ($state)
-                <input type="hidden" name="state" value="{{ $state }}">
+                <input type="hidden" name="state" value="{{ $state->value }}">
             @endif
             <label for="stock-q" class="sr-only">Поиск</label>
             <input id="stock-q" name="q" value="{{ $query }}" maxlength="100" placeholder="Название или артикул"
@@ -60,10 +59,10 @@
         <div class="flex flex-wrap gap-2 text-sm">
             <a href="{{ route('control-panel.stock.index', array_filter(['q' => $query])) }}"
                class="rounded-full px-3 py-1 {{ $state === null ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50' }}">Все</a>
-            @foreach (App\Http\Controllers\StockController::STATES as $key => $label)
-                <a href="{{ route('control-panel.stock.index', array_filter(['q' => $query, 'state' => $key])) }}"
-                   class="rounded-full px-3 py-1 {{ $state === $key ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50' }}">
-                    {{ $label }} <span class="opacity-70">· {{ $counts[$key] }}</span>
+            @foreach (App\Enums\StockState::cases() as $option)
+                <a href="{{ route('control-panel.stock.index', array_filter(['q' => $query, 'state' => $option->value])) }}"
+                   class="rounded-full px-3 py-1 {{ $state === $option ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50' }}">
+                    {{ $option->label() }} <span class="opacity-70">· {{ $counts[$option->value] }}</span>
                 </a>
             @endforeach
         </div>

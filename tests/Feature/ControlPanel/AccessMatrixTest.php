@@ -7,7 +7,6 @@ namespace Tests\Feature\ControlPanel;
 use App\Enums\PermissionCode;
 use App\Enums\RoleName;
 use App\Models\Permission;
-use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -23,19 +22,11 @@ class AccessMatrixTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    private function admin(): User
-    {
-        $user = User::factory()->create(['email_verified_at' => now()]);
-        $user->syncRoles([RoleName::Admin->value]);
-
-        return $user->fresh();
-    }
-
     public function test_критичное_право_нельзя_снять_с_администратора(): void
     {
         $adminRole = Role::findByName(RoleName::Admin->value);
 
-        $this->actingAs($this->admin())
+        $this->actingAs($this->userWithRole(RoleName::Admin))
             ->put("/control-panel/access-control/{$adminRole->id}", ['permissions' => []])
             ->assertSessionHasErrors('permissions');
 
@@ -49,7 +40,7 @@ class AccessMatrixTest extends TestCase
         $userRole = Role::findByName(RoleName::User->value);
         $exclusive = Permission::where('name', PermissionCode::ManageAccess->value)->firstOrFail();
 
-        $this->actingAs($this->admin())
+        $this->actingAs($this->userWithRole(RoleName::Admin))
             ->put("/control-panel/access-control/{$userRole->id}", [
                 'permissions' => [$exclusive->id],
             ])

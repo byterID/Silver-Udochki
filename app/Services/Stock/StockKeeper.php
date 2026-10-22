@@ -12,59 +12,53 @@ use App\Models\User;
 use Closure;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Единственное место, где меняется products.stock. Каждое изменение —
- * строка в журнале stock_movements с дельтой и остатком после неё.
- */
+// Единственное место, где меняется products.stock: каждое изменение пишется в stock_movements
 class StockKeeper
 {
     public const MAX_STOCK = 1_000_000;
 
-    /** Поступление: остаток растёт на $quantity. */
     public function restock(Product $product, int $quantity, ?User $by = null, ?string $note = null): StockMovement
     {
-        if ($quantity < 1) {
-            throw new StockException('Поступление должно быть не меньше одной штуки.');
-        }
+        $this->ensurePositive($quantity, 'Поступление должно быть не меньше одной штуки.');
 
         /** @var StockMovement */
         return $this->change($product, fn (int $stock) => $stock + $quantity, StockReason::Restock, $by, $note);
     }
 
-    /** Инвентаризация: остаток ставится точным числом. null — число не изменилось. */
+    // null — остаток уже такой, журнал не пишется
     public function setCount(Product $product, int $count, ?User $by = null, ?string $note = null): ?StockMovement
     {
         return $this->change($product, fn () => $count, StockReason::Inventory, $by, $note);
     }
 
-    /** Продажа по заказу: остаток уменьшается на $quantity, но не ниже нуля. */
     public function sell(Product $product, int $quantity, Order $order, ?User $buyer = null): StockMovement
     {
-        if ($quantity < 1) {
-            throw new StockException('Продать можно не меньше одной штуки.');
-        }
+        $this->ensurePositive($quantity, 'Продать можно не меньше одной штуки.');
 
         /** @var StockMovement */
         return $this->change($product, fn (int $stock) => $stock - $quantity, StockReason::Sale, $buyer, 'Заказ '.$order->number());
     }
 
-    /** Возврат по заказу: товар снова на полке, остаток растёт на $quantity. */
     public function putBack(Product $product, int $quantity, Order $order, ?User $buyer = null): StockMovement
     {
-        if ($quantity < 1) {
-            throw new StockException('Вернуть можно не меньше одной штуки.');
-        }
+        $this->ensurePositive($quantity, 'Вернуть можно не меньше одной штуки.');
 
         /** @var StockMovement */
         return $this->change($product, fn (int $stock) => $stock + $quantity, StockReason::Returned, $buyer, 'Возврат по заказу '.$order->number());
+    }
+
+    private function ensurePositive(int $quantity, string $message): void
+    {
+        if ($quantity < 1) {
+            throw new StockException($message);
+        }
     }
 
     /** @param Closure(int): int $next новый остаток из текущего */
     private function change(Product $product, Closure $next, StockReason $reason, ?User $by, ?string $note): ?StockMovement
     {
         $movement = DB::transaction(function () use ($product, $next, $reason, $by, $note): ?StockMovement {
-            // Блокировка строки: два одновременных изменения не затрут друг друга,
-            // а остаток считается от свежего значения, а не от того, что в $product
+            // Считаем от заблокированной строки, а не от $product: параллельные изменения не затрут друг друга
             $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
             $after = $next($locked->stock);
 

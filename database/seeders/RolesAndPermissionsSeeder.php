@@ -18,7 +18,6 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        // 1. Права и их группы — источник истины в PermissionCode
         foreach (PermissionCode::cases() as $code) {
             $group = ActionGroup::firstOrCreate(['name' => $code->group()]);
 
@@ -28,7 +27,6 @@ class RolesAndPermissionsSeeder extends Seeder
             );
         }
 
-        // 2. Роли и их права по умолчанию
         foreach (RoleName::cases() as $roleName) {
             $role = Role::findOrCreate($roleName->value, 'web');
             $role->syncPermissions($roleName->defaultPermissions());

@@ -23,9 +23,6 @@ use App\Models\Promotion;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\Route;
 
-/*
- * Задачи
- */
 Route::middleware('auth')->group(function () {
     Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -45,9 +42,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/read', 'read')->name('read');
     });
 });
-/*
- * Магазин
- */
+
 Route::get('/', [CatalogController::class, 'home'])->name('home');
 
 Route::get('/catalog/{slug}', [CatalogController::class, 'category'])
@@ -58,14 +53,12 @@ Route::get('/search', [CatalogController::class, 'search'])
     ->middleware('throttle:60,1')
     ->name('catalog.search');
 
-// Корзина: пересчёт цен и промокод (сама корзина в localStorage)
 Route::prefix('cart')->name('cart.')->controller(CartController::class)->group(function () {
     Route::post('/quote', 'quote')->middleware('throttle:cart')->name('quote');
     Route::post('/promo-code', 'applyCode')->middleware('throttle:promo-code')->name('promo-code.apply');
     Route::delete('/promo-code', 'removeCode')->middleware('throttle:cart')->name('promo-code.remove');
 });
 
-// Заказы: оформление оплачивает корзину кошельком, история и возвраты — для окна «Мои заказы»
 Route::middleware('auth')->prefix('orders')->name('orders.')->group(function () {
     Route::get('/', [OrderController::class, 'index'])->middleware('throttle:60,1,orders')->name('index');
     Route::post('/', [OrderController::class, 'store'])->middleware('throttle:checkout')->name('store');
@@ -73,7 +66,6 @@ Route::middleware('auth')->prefix('orders')->name('orders.')->group(function () 
         ->whereNumber('order')->can('refund', 'order')->middleware('throttle:order-return')->name('returns.store');
 });
 
-// Мини-игра: единственный способ заработать. Полёты и награду считает сервер (GameMaster)
 Route::middleware('auth')->prefix('game')->name('game.')->controller(GameController::class)->group(function () {
     Route::get('/', 'index')->name('index');
     Route::post('/rounds', 'store')->middleware('throttle:game-start')->name('rounds.store');
@@ -82,10 +74,10 @@ Route::middleware('auth')->prefix('game')->name('game.')->controller(GameControl
 });
 
 Route::get('/request-info', RequestInfoController::class)
-    ->middleware('throttle:60,1') // не больше 60 запросов в минуту с одного IP
+    ->middleware('throttle:60,1')
     ->name('request-info');
 
-// Отдельного дашборда нет: после входа и регистрации сразу в лавку.
+// Breeze после входа ведёт на dashboard, а его роль играет лавка
 Route::redirect('/dashboard', '/')->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -94,11 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-/*
- * Панель управления.
- * Внешний слой — право на вход. Внутри — отдельное право на каждый раздел,
- * чтобы доступ к панели не означал автоматически доступ ко всему.
- */
+// Право на вход в панель не даёт доступа к разделам: у каждого раздела своё право
 Route::middleware(['auth', 'verified', 'permission:'.PermissionCode::AccessControlPanel->value])
     ->prefix('control-panel')
     ->name('control-panel.')
@@ -132,7 +120,6 @@ Route::middleware(['auth', 'verified', 'permission:'.PermissionCode::AccessContr
                 ->name('action-groups.update');
         });
 
-        // Акции: каждое действие под своим правом (проверки в PromotionPolicy)
         Route::prefix('promotions')->name('promotions.')->controller(PromotionController::class)->group(function () {
             Route::get('/', 'index')->can('viewAny', Promotion::class)->name('index');
             Route::get('/create', 'create')->can('create', Promotion::class)->name('create');
@@ -148,7 +135,6 @@ Route::middleware(['auth', 'verified', 'permission:'.PermissionCode::AccessContr
             Route::get('/{promotion}/edit', 'edit')->can('update', 'promotion')->name('edit');
         });
 
-        // Склад: просмотр и изменение остатков под разными правами (StockMovementPolicy)
         Route::prefix('stock')->name('stock.')->controller(StockController::class)->group(function () {
             Route::get('/', 'index')->can('viewAny', StockMovement::class)->name('index');
             Route::get('/movements', 'movements')->can('viewAny', StockMovement::class)->name('movements');

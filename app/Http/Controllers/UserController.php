@@ -10,6 +10,7 @@ use App\Http\Requests\ControlPanel\StoreUserRequest;
 use App\Http\Requests\ControlPanel\UpdateUserRequest;
 use App\Models\User;
 use App\Services\UserService;
+use App\Support\SearchTerm;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -23,26 +24,12 @@ class UserController extends Controller
 
     public function staff(Request $request): View
     {
-        $this->authorize('viewAny', User::class);
-
-        return view('users.staff', [
-            'users' => $this->filtered($request, RoleName::staffValues())
-                ->paginate(20)
-                ->withQueryString(),
-            'roles' => $this->assignableRoles($request),
-        ]);
+        return $this->listing($request, 'users.staff', RoleName::staffValues());
     }
 
     public function customers(Request $request): View
     {
-        $this->authorize('viewAny', User::class);
-
-        return view('users.customers', [
-            'users' => $this->filtered($request, RoleName::customerValues())
-                ->paginate(20)
-                ->withQueryString(),
-            'roles' => $this->assignableRoles($request),
-        ]);
+        return $this->listing($request, 'users.customers', RoleName::customerValues());
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
@@ -68,7 +55,21 @@ class UserController extends Controller
         return back()->with('status', "Пользователь «{$name}» удалён");
     }
 
+    /** @param list<string> $roleNames */
+    private function listing(Request $request, string $view, array $roleNames): View
+    {
+        $this->authorize('viewAny', User::class);
+
+        $level = $request->user()->highestRoleLevel();
+
+        return view($view, [
+            'users' => $this->filtered($request, $roleNames)->paginate(20)->withQueryString(),
+            'roles' => array_values(array_filter(RoleName::cases(), fn (RoleName $role) => $role->isAssignableBy($level))),
+        ]);
+    }
+
     /**
+     * @param  list<string>  $roleNames
      * @return Builder<User>
      */
     private function filtered(Request $request, array $roleNames): Builder
@@ -77,51 +78,20 @@ class UserController extends Controller
             ->with('roles')
             ->whereHas('roles', fn (Builder $q) => $q->whereIn('name', $roleNames));
 
-        if ($request->filled('name')) {
-            $query->where('name', 'ilike', '%'.$this->escapeLike($request->string('name')->value()).'%');
-        }
-
-        if ($request->filled('email')) {
-            $query->where('email', 'ilike', '%'.$this->escapeLike($request->string('email')->value()).'%');
-        }
-
-        if ($request->filled('role')) {
-            $role = $request->string('role')->value();
-
-            if (in_array($role, $roleNames, true)) {
-                $query->whereHas('roles', fn (Builder $q) => $q->where('name', $role));
+        foreach (['name', 'email'] as $field) {
+            $term = SearchTerm::from($request->query($field));
+            if ($term !== '') {
+                $query->whereLike($field, '%'.$term.'%');
             }
         }
 
-        $sort = in_array($request->input('sort'), self::SORTABLE, true)
-            ? $request->input('sort')
-            : 'created_at';
+        $role = $request->query('role');
+        if (is_string($role) && in_array($role, $roleNames, true)) {
+            $query->whereHas('roles', fn (Builder $q) => $q->where('name', $role));
+        }
 
-        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $sort = in_array($request->query('sort'), self::SORTABLE, true) ? $request->query('sort') : 'created_at';
 
-        return $query->orderBy($sort, $direction);
-    }
-
-    /**
-     * Роли, которые текущий пользователь вправе назначать.
-     *
-     * @return array<int, RoleName>
-     */
-    private function assignableRoles(Request $request): array
-    {
-        $level = $request->user()->highestRoleLevel();
-        $strict = (bool) config('access.strict_hierarchy', true);
-
-        return array_values(array_filter(
-            RoleName::cases(),
-            fn (RoleName $role) => $strict
-                ? $role->level() < $level
-                : $role->level() <= $level
-        ));
-    }
-
-    private function escapeLike(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
+        return $query->orderBy($sort, $request->query('direction') === 'asc' ? 'asc' : 'desc');
     }
 }

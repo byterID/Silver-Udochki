@@ -11,11 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
-/**
- * Пересчёт корзины. Сама корзина живёт в localStorage, но цены, скидки
- * и промокод — только отсюда. Промокод хранится в сессии, чтобы его нельзя
- * было подставлять в каждый запрос пересчёта и подбирать перебором.
- */
+// Промокод живёт в сессии, а не в каждом запросе пересчёта: так его не подобрать перебором
+// мимо лимита promo-code
 class CartController extends Controller
 {
     public const SESSION_KEY = 'cart.promo_code';
@@ -26,7 +23,7 @@ class CartController extends Controller
     {
         $quote = $this->prices->quote($request->quantities(), $request->session()->get(self::SESSION_KEY));
 
-        // Промокод перестал действовать: сообщим один раз и забудем
+        // codeError приходит один раз, дальше код забыт
         if ($quote->codeError !== null) {
             $request->session()->forget(self::SESSION_KEY);
         }

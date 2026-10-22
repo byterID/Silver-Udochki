@@ -6,7 +6,6 @@ use App\Enums\PermissionCode;
 use App\Enums\RoleName;
 
 return [
-
     'super_role' => RoleName::Admin->value,
 
     'locked_permissions' => [

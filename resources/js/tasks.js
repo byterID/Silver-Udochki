@@ -1,12 +1,13 @@
+import { send } from './http';
+
 const MIN_DELAY = 1500;
 const MAX_DELAY = 10000;
 const MAX_DELAY_OFFLINE = 30000;
-// Сколько ждём нотификатор после завершения задачи. Если он лежит,
-// не долбим сервер вечно: колокольчик подхватит уведомление плановым опросом.
+// Если нотификатор лежит, не опрашиваем вечно: уведомление подхватит плановый опрос колокольчика
 const NOTIFY_WAIT_LIMIT = 30000;
 
-const BELL_POLL_IDLE = 30000;   // задач нет — редко
-const BELL_POLL_ACTIVE = 5000;  // ждём уведомление — часто
+const BELL_POLL_IDLE = 30000;
+const BELL_POLL_ACTIVE = 5000;
 
 export function taskStatus(initial, statusUrl) {
     return {
@@ -15,7 +16,7 @@ export function taskStatus(initial, statusUrl) {
         delay: MIN_DELAY,
         timer: null,
         finishedSeenAt: initial.finished ? Date.now() : null,
-        remaining: initial.expires_in,   // секунды до удаления файла
+        remaining: initial.expires_in,
         countdown: null,
 
         init() {
@@ -30,7 +31,7 @@ export function taskStatus(initial, statusUrl) {
             });
         },
 
-        // Опрос нужен, пока задача не завершена ИЛИ пока не пришло уведомление.
+        // Опрос нужен, пока задача не завершена или пока не пришло уведомление
         isSettled() {
             if (!this.task.finished) return false;
             if (this.task.notified) return true;
@@ -43,7 +44,7 @@ export function taskStatus(initial, statusUrl) {
         },
 
         async poll() {
-            if (document.hidden) {           // вкладка в фоне: не тратим запросы
+            if (document.hidden) {
                 this.schedule();
                 return;
             }
@@ -51,7 +52,7 @@ export function taskStatus(initial, statusUrl) {
             try {
                 const res = await fetch(statusUrl, { headers: { Accept: 'application/json' } });
                 if (res.status === 401 || res.status === 403) {
-                    window.location.reload(); // сессия истекла: пусть сервер отправит на логин
+                    window.location.reload(); // сессия истекла: сервер отправит на вход
                     return;
                 }
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -67,22 +68,20 @@ export function taskStatus(initial, statusUrl) {
             if (!this.isSettled()) this.schedule();
         },
 
-        // Сравниваем старое и новое состояние: реагируем только на переходы,
-        // иначе событие улетало бы при каждом опросе.
+        // Реагируем только на переходы, иначе события летели бы на каждом опросе
         apply(fresh) {
             const prev = this.task;
             this.task = fresh;
 
             if (fresh.finished && !prev.finished) {
                 this.finishedSeenAt = Date.now();
-                this.delay = MIN_DELAY;      // уведомление вот-вот появится, спрашиваем чаще
+                this.delay = MIN_DELAY;
                 this.remaining = fresh.expires_in;
                 this.startCountdown();
             }
 
             if (fresh.notified && !prev.notified) {
-                // На window, а не на элементе: колокольчик живёт в навигации,
-                // он не родитель этого блока, и всплытие до него могло не дойти.
+                // На window: колокольчик живёт в навигации и не является предком этого блока
                 window.dispatchEvent(new CustomEvent('notifications:refresh'));
             }
         },
@@ -90,7 +89,7 @@ export function taskStatus(initial, statusUrl) {
         startCountdown() {
             if (this.remaining === null || this.countdown) return;
 
-            this.countdown = setTimeout(() => {
+            this.countdown = setInterval(() => {
                 this.remaining = Math.max(0, this.remaining - 1);
                 if (this.remaining === 0) {
                     clearInterval(this.countdown);
@@ -106,14 +105,6 @@ export function taskStatus(initial, statusUrl) {
             return `${m}:${s}`;
         },
     };
-}
-
-const BELL_POLL_INTERVAL = 30000;
-
-// CSRF-токен из <meta name="csrf-token"> в layouts/app.blade.php.
-// Без него Laravel отвечает на любой POST ошибкой 419.
-function csrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 }
 
 export function notificationBell(urls) {
@@ -136,21 +127,17 @@ export function notificationBell(urls) {
             });
         },
 
-        // Следующий опрос планируется после каждого load(): интервал
-        // выбирается по свежему ответу сервера.
         scheduleNext() {
             clearTimeout(this.pollTimer);
             const delay = this.pendingTasks ? BELL_POLL_ACTIVE : BELL_POLL_IDLE;
             this.pollTimer = setTimeout(() => {
-                if (document.hidden) this.scheduleNext();  // вкладка в фоне — пропускаем
+                if (document.hidden) this.scheduleNext();
                 else this.load();
             }, delay);
         },
 
         async load() {
-            // Если запрос уже идёт, новый не запускаем, а ставим в очередь.
-            // Просто пропустить нельзя: плановый запрос мог уйти за миг до
-            // появления уведомления, а сигнал refresh тогда потерялся бы.
+            // Не пропускаем, а ставим в очередь: идущий запрос мог уйти до появления уведомления
             if (this.loading) {
                 this.reloadQueued = true;
                 return;
@@ -177,47 +164,35 @@ export function notificationBell(urls) {
             }
         },
 
-        post(url) {
-            return fetch(url, {
-                method: 'POST',
-                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken() },
-            });
+        async post(url) {
+            try {
+                await send('POST', url);
+            } catch {
+                // Нет сети: следующий load() вернёт правду с сервера
+            }
         },
 
         async markRead(item) {
             if (!item.read_at) {
-                // Оптимистичное обновление: сначала меняем интерфейс, потом
-                // сообщаем серверу. Кнопка реагирует мгновенно, без ожидания сети.
                 item.read_at = new Date().toISOString();
                 this.unread = Math.max(0, this.unread - 1);
-                try {
-                    await this.post(urls.read.replace('__ID__', item.id));
-                } catch {
-                    // Не страшно: при следующем load() придёт правда с сервера.
-                }
+                // Уходим со страницы только после ответа, иначе браузер оборвёт POST
+                await this.post(urls.read.replace('__ID__', item.id));
             }
 
-            // Переходим только после await: если уйти со страницы раньше,
-            // браузер может оборвать POST, и отметка «прочитано» не сохранится.
-            const url = item.url;           // ← поправьте ключ, если у вас другой
-            if (url) window.location.href = url;
+            if (item.url) window.location.href = item.url;
         },
 
         async markAllRead() {
             this.items.forEach((item) => { item.read_at ??= new Date().toISOString(); });
             this.unread = 0;
-            try {
-                await this.post(urls.readAll);
-            } catch {}
+            await this.post(urls.readAll);
         },
 
-        // Удаляет прочитанные. Список показывает последние 10, поэтому после
-        // очистки перечитываем его: на место удалённых встанут более старые непрочитанные.
+        // Список показывает последние 10: после очистки на место прочитанных встанут более старые
         async clearRead() {
             this.items = this.items.filter((item) => !item.read_at);
-            try {
-                await this.post(urls.clearRead);
-            } catch {}
+            await this.post(urls.clearRead);
             this.load();
         },
 
@@ -227,7 +202,6 @@ export function notificationBell(urls) {
 
         time(iso) {
             const date = new Date(iso);
-            // Защита на будущее: битая дата не должна показываться пользователю как "Invalid Date"
             if (Number.isNaN(date.getTime())) return '';
             return date.toLocaleString('ru-RU', {
                 day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',

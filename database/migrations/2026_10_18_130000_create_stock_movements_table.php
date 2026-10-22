@@ -5,18 +5,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/*
- * Журнал движения по складу: каждое изменение остатка — строка с дельтой
- * и остатком после неё. Остаток в products.stock — итог этого журнала.
- */
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
-            // Без внешнего ключа, как в order_items: восстановление каталога делает
-            // TRUNCATE products ... CASCADE и стёрло бы журнал. Артикул и название копируются.
+            // Без FK по той же причине, что в order_items
             $table->unsignedBigInteger('product_id');
             $table->string('sku');
             $table->string('name');
@@ -31,8 +26,7 @@ return new class extends Migration
             $table->index('reason');
         });
 
-        // unsignedInteger в PostgreSQL ничего не значит: отрицательный остаток запрещаем явно.
-        // SQLite (тесты) не умеет добавлять ограничения к готовой таблице.
+        // unsigned в PostgreSQL не работает. SQLite не умеет добавлять CHECK к готовой таблице
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE products ADD CONSTRAINT products_stock_non_negative CHECK (stock >= 0)');
         }

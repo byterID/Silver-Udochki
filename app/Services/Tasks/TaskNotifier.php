@@ -28,6 +28,7 @@ final class TaskNotifier
             return;
         }
 
+        // notified_at под блокировкой: повтор события из Kafka второго уведомления не создаст
         $sent = DB::transaction(function () use ($taskId): bool {
             $task = Task::query()
                 ->whereKey($taskId)

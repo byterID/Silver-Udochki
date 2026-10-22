@@ -16,7 +16,6 @@ use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
-/** Оформление заказа: оплата кошельком, списание остатков, идемпотентность. */
 class CheckoutTest extends TestCase
 {
     use RefreshDatabase;
@@ -31,12 +30,6 @@ class CheckoutTest extends TestCase
         $this->buyer = User::factory()->create();
     }
 
-    /** @param array<int, int> $items id => qty */
-    private function items(array $items): array
-    {
-        return collect($items)->map(fn ($qty, $id) => ['id' => $id, 'qty' => $qty])->values()->all();
-    }
-
     /**
      * @param  array<int, int>  $items  id => qty
      * @return TestResponse<JsonResponse>
@@ -44,7 +37,7 @@ class CheckoutTest extends TestCase
     private function checkout(array $items, int $total, ?string $key = null): TestResponse
     {
         return $this->actingAs($this->buyer)->postJson(route('orders.store'), [
-            'items' => $this->items($items),
+            'items' => $this->cartItems($items),
             'total' => $total,
             'key' => $key ?? (string) Str::uuid(),
         ]);
@@ -59,7 +52,7 @@ class CheckoutTest extends TestCase
     {
         $product = Product::factory()->create(['price' => 1000]);
 
-        $this->postJson(route('cart.quote'), ['items' => $this->items([$product->id => 2])])
+        $this->postJson(route('cart.quote'), ['items' => $this->cartItems([$product->id => 2])])
             ->assertOk()
             ->assertJsonPath('total', 2000)
             ->assertJsonPath('delivery_fee', 700)
@@ -129,7 +122,7 @@ class CheckoutTest extends TestCase
         $promotion = Promotion::factory()->code('RYBAK300', 300, maxUses: 5)->create();
 
         $this->actingAs($this->buyer)
-            ->postJson(route('cart.promo-code.apply'), ['items' => $this->items([$product->id => 2]), 'code' => 'RYBAK300'])
+            ->postJson(route('cart.promo-code.apply'), ['items' => $this->cartItems([$product->id => 2]), 'code' => 'RYBAK300'])
             ->assertOk();
 
         $this->checkout([$product->id => 2], 2400)
@@ -148,7 +141,7 @@ class CheckoutTest extends TestCase
         $promotion = Promotion::factory()->code('LAST', 300, maxUses: 1)->create();
 
         $this->actingAs($this->buyer)
-            ->postJson(route('cart.promo-code.apply'), ['items' => $this->items([$product->id => 1]), 'code' => 'LAST'])
+            ->postJson(route('cart.promo-code.apply'), ['items' => $this->cartItems([$product->id => 1]), 'code' => 'LAST'])
             ->assertOk();
 
         // Последний раз его успел применить кто-то другой
@@ -232,7 +225,7 @@ class CheckoutTest extends TestCase
         $product = Product::factory()->create();
 
         $this->postJson(route('orders.store'), [
-            'items' => $this->items([$product->id => 1]), 'total' => 1700, 'key' => (string) Str::uuid(),
+            'items' => $this->cartItems([$product->id => 1]), 'total' => 1700, 'key' => (string) Str::uuid(),
         ])->assertUnauthorized();
 
         $this->getJson(route('orders.index'))->assertUnauthorized();

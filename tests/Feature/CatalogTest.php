@@ -77,8 +77,6 @@ class CatalogTest extends TestCase
 
     public function test_monitor_catalog_comes_from_database(): void
     {
-        $this->seed(CatalogSeeder::class);
-
         $shop = app(ShopCatalog::class);
         $data = $shop->catalogData();
 

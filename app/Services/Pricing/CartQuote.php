@@ -6,13 +6,13 @@ namespace App\Services\Pricing;
 
 use App\Models\Promotion;
 
-/** Расчёт корзины: строки, скидки по акциям, промокод и бесплатная доставка. */
+// Та же формула продублирована в геттерах cart.js
 final readonly class CartQuote
 {
     /**
      * @param  list<CartLine>  $lines
-     * @param  list<int>  $missing  товары, которых больше нет в продаже или на складе
-     * @param  list<int>  $limited  товары, у которых количество урезано до остатка
+     * @param  list<int>  $missing  сняты с продажи или закончились
+     * @param  list<int>  $limited  количество урезано до остатка
      */
     public function __construct(
         public array $lines,
@@ -23,13 +23,11 @@ final readonly class CartQuote
         public array $limited = [],
     ) {}
 
-    /** Сумма по базовым ценам. */
     public function subtotal(): int
     {
         return array_sum(array_map(fn (CartLine $l) => $l->baseTotal(), $this->lines));
     }
 
-    /** Сумма после скидок на товары, до промокода. */
     public function goodsTotal(): int
     {
         return array_sum(array_map(fn (CartLine $l) => $l->total(), $this->lines));
@@ -40,7 +38,6 @@ final readonly class CartQuote
         return $this->subtotal() - $this->goodsTotal();
     }
 
-    /** Промокод не может сделать заказ дешевле нуля. */
     public function codeDiscount(): int
     {
         return $this->code === null ? 0 : min((int) $this->code->value, $this->goodsTotal());
@@ -70,13 +67,11 @@ final readonly class CartQuote
         return $from === null ? 0 : max(0, $from - $this->total());
     }
 
-    /** Доставка по тарифу из config/shop.php, если акция её не обнулила. Пустую корзину не везут. */
     public function deliveryPrice(): int
     {
         return $this->lines === [] || $this->hasFreeDelivery() ? 0 : self::deliveryFee();
     }
 
-    /** К оплате: товары после всех скидок плюс доставка. */
     public function toPay(): int
     {
         return $this->total() + $this->deliveryPrice();

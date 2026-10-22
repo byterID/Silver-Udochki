@@ -1,13 +1,9 @@
 import { send } from './http';
 
-/*
- * Мини-игра «Утиная зорька». Полёты уток приходят с сервера (FlightPlanner),
- * браузер рисует их и запоминает выстрелы: когда (мс от начала раунда) и куда.
- * Награду считает сервер (ShotJudge), здесь попадания только для картинки,
- * поэтому формула положения утки и выбор цели повторяют серверные один в один.
- */
+// Награду считает сервер (ShotJudge), здесь попадания только для картинки,
+// поэтому положение утки и выбор цели повторяют серверные один в один
 
-/** Запас к паузам ружья: время округляется вниз, а сервер считает строго. */
+// Запас к паузам ружья: время округляется вниз, а сервер считает строго
 const GUARD_MS = 25;
 const QUIP_MS = 2800;
 const DOG_SPEED = 230;
@@ -19,7 +15,7 @@ const LOOKS = {
     golden: { size: 0.8, body: '#e2b007', belly: '#f7dd72', head: '#f2c94c', wing: '#c99700', speculum: '#fff3bf', beak: '#f08c00', glow: true },
 };
 
-/** Где утка в момент t. null — ещё не взлетела или уже улетела. Как ShotJudge::position(). */
+// Как ShotJudge::position(): null — ещё не взлетела или уже улетела
 export function position(path, t) {
     const last = path.length - 1;
     if (t < path[0][0] || t > path[last][0]) return null;
@@ -35,7 +31,7 @@ export function position(path, t) {
     return null;
 }
 
-/** Ближайшая к прицелу живая утка в радиусе попадания. Как цикл в ShotJudge::judge(). */
+// Как цикл в ShotJudge::judge(): ближайшая к прицелу живая утка в радиусе попадания
 export function target(ducks, t, x, y) {
     let best = null;
     let nearest = Infinity;
@@ -57,7 +53,7 @@ export function target(ducks, t, x, y) {
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
-/** Детерминированный генератор: пейзаж не меняется при пересчёте размеров. */
+// Детерминированный генератор: пейзаж не меняется при пересчёте размеров
 function lcg(seed) {
     let s = seed >>> 0;
     return () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296;
@@ -224,7 +220,6 @@ class Hunt {
         this.tick(true);
     }
 
-    /** Попадание: утка замирает, падает в воду, собака плывёт за ней. */
     down(duck, t) {
         const [x, y, dir] = position(duck.path, t);
         const { width: W, height: H, horizon: Y } = this.field;
@@ -329,7 +324,6 @@ class Hunt {
         this.flash = Math.max(0, this.flash - dt * 14);
     }
 
-    /** Ретривер по очереди приносит подбитых уток на берег. */
     updateDog(dt) {
         const dog = this.dog;
         if (!dog.chasing && !dog.carrying && this.floating.length) dog.chasing = this.floating[0];
@@ -411,7 +405,6 @@ class Hunt {
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, W, Y + 1);
 
-        // Солнце встаёт из-за леса
         const sx = W * 0.7;
         const glow = ctx.createRadialGradient(sx, Y - 6, 10, sx, Y - 6, 170);
         glow.addColorStop(0, 'rgba(255, 236, 170, 0.9)');
@@ -460,7 +453,6 @@ class Hunt {
         ctx.fillStyle = water;
         ctx.fillRect(0, Y, W, H - Y);
 
-        // Солнечная дорожка
         const path = ctx.createLinearGradient(0, Y, 0, H);
         path.addColorStop(0, 'rgba(255, 236, 170, 0.55)');
         path.addColorStop(1, 'rgba(255, 236, 170, 0)');
@@ -526,7 +518,6 @@ class Hunt {
         ctx.save();
         ctx.translate(dog.x, dog.y + bob);
 
-        // Вода вокруг шеи и «усы» за плывущей собакой
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -610,7 +601,6 @@ class Hunt {
         }
     }
 
-    /** Двустволка охотника: из-под нижнего края, стволы смотрят на прицел. */
     drawGun() {
         const { ctx, aim } = this;
         const { width: W, height: H } = this.field;
@@ -682,7 +672,7 @@ class Hunt {
     }
 }
 
-/** Утка в профиль: flap от -1 (крылья вниз) до 1 (вверх), rotation в радианах. */
+// flap от -1 (крылья вниз) до 1 (вверх), rotation в радианах
 function drawDuck(ctx, look, x, y, facing, flap, rotation, scale = 1) {
     const wing = (color, f) => {
         ctx.fillStyle = color;
@@ -759,7 +749,7 @@ function shade(hex) {
 
 export default function registerDuckGame(Alpine) {
     Alpine.data('duckGame', (setup) => {
-        // Сцена и её объекты живут вне реактивности Alpine: 60 кадров в секунду через Proxy ни к чему
+        // Сцена живёт вне реактивности Alpine: 60 кадров в секунду через Proxy ни к чему
         let hunt = null;
         let round = null;
         let pendingShots = null;
@@ -858,7 +848,7 @@ export default function registerDuckGame(Alpine) {
                 this.error = '';
                 const { ok, status, data } = await safeSend('POST', round.finish_url, { shots: pendingShots });
 
-                // Часы браузера чуть спешат: сервер просит подождать, пока утки точно улетят
+                // 425: часы браузера спешат, сервер просит подождать, пока утки улетят
                 if (status === 425 && attempt < 3) {
                     setTimeout(() => this.finish(attempt + 1), 1500);
                     return;
@@ -891,7 +881,6 @@ export default function registerDuckGame(Alpine) {
                 if (this.canRetry) this.finish();
             },
 
-            /** Деньги за раунд урезал суточный лимит. */
             get capped() {
                 return this.result !== null && this.result.reward < this.result.score * this.rate;
             },

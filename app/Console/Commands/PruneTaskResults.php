@@ -25,17 +25,11 @@ final class PruneTaskResults extends Command
         Task::query()
             ->whereNotNull('result_path')
             ->where('finished_at', '<', $threshold)
-            // lazyById читает пачками по 100 и не держит в памяти всю выборку.
-            // С UUID v7 это работает: они упорядочены по времени создания.
             ->lazyById(100)
             ->each(function (Task $task) use ($disk, &$deleted): void {
-                // Сначала файл, потом запись в БД. Если упадёт между ними,
-                // строка будет указывать на несуществующий файл: download() честно
-                // ответит 410, а следующий запуск команды доделает работу.
-                // При обратном порядке остался бы файл, о котором никто не знает.
-                $disk->delete($task->result_path); // отсутствующий файл не ошибка
-
-                // result_path не в $fillable (защита от подделки), поэтому forceFill.
+                // Сначала файл, потом строка: при сбое между ними download() ответит 410,
+                // а следующий запуск доделает. Обратный порядок оставил бы ничейный файл
+                $disk->delete($task->result_path);
                 $task->forceFill(['result_path' => null])->save();
                 $deleted++;
             });

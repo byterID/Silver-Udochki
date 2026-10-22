@@ -6,14 +6,9 @@ namespace App\Enums;
 
 enum PromotionType: string
 {
-    /** Скидка в процентах на выбранные товары, действует сама. */
-    case Percent = 'percent';
-
-    /** Фиксированная сумма со всего заказа по промокоду. */
-    case Fixed = 'fixed';
-
-    /** Бесплатная доставка, если заказ не меньше порога. */
-    case FreeDelivery = 'free_delivery';
+    case Percent = 'percent';            // на выбранные товары, без кода
+    case Fixed = 'fixed';                // промокод на сумму со всего заказа
+    case FreeDelivery = 'free_delivery'; // от min_order_amount
 
     public function label(): string
     {

@@ -4,12 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 
-/*
- * Деплой запускает только миграции, поэтому новые права заводим здесь,
- * а не только в RolesAndPermissionsSeeder. Выдаём их admin и manager, если роли уже есть
- * (на свежей базе ролей ещё нет — их создаст сидер). Уже настроенные права ролей не трогаем.
- * Коды записаны строками, а не через PermissionCode: миграция не должна зависеть от enum.
- */
+// Деплой не запускает сидеры, поэтому права заводит миграция. Коды строками: миграция
+// не должна зависеть от enum. Роли admin и manager получают права, если уже существуют
 return new class extends Migration
 {
     private const GROUP = 'Акции';
@@ -64,7 +60,6 @@ return new class extends Migration
     {
         $tables = config('permission.table_names');
 
-        // Связи с ролями и пользователями удалятся каскадом
         DB::table($tables['permissions'])
             ->whereIn('name', array_keys(self::PERMISSIONS))
             ->where('guard_name', 'web')

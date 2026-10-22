@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Services\Tasks\TaskCompletedPublisher;
+use App\Services\Tasks\TaskEvents;
 use App\Services\Tasks\TaskNotifier;
 use Illuminate\Console\Command;
 use Junges\Kafka\Contracts\ConsumerMessage;
@@ -19,7 +19,7 @@ final class ConsumeNotifications extends Command
 
     public function handle(TaskNotifier $notifier): int
     {
-        $consumer = Kafka::consumer([TaskCompletedPublisher::TOPIC])
+        $consumer = Kafka::consumer([TaskEvents::COMPLETED])
             ->withConsumerGroupId('notifier')
             ->withManualCommit()
             ->withHandler(function (ConsumerMessage $message, MessageConsumer $consumer) use ($notifier): void {

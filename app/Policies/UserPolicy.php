@@ -22,36 +22,12 @@ class UserPolicy
 
     public function update(User $actor, User $target): Response
     {
-        if (! $actor->can(PermissionCode::ManageUsers->value)) {
-            return Response::deny('Недостаточно прав для управления пользователями.');
-        }
-
-        if ($actor->is($target)) {
-            return Response::deny('Собственную учётную запись меняйте через профиль.');
-        }
-
-        if ($target->highestRoleLevel() >= $actor->highestRoleLevel()) {
-            return Response::deny('Нельзя редактировать пользователя с равными или большими правами.');
-        }
-
-        return Response::allow();
+        return $this->manage($actor, $target, 'Собственную учётную запись меняйте через профиль.', 'редактировать');
     }
 
     public function delete(User $actor, User $target): Response
     {
-        if (! $actor->can(PermissionCode::ManageUsers->value)) {
-            return Response::deny('Недостаточно прав для управления пользователями.');
-        }
-
-        if ($actor->is($target)) {
-            return Response::deny('Нельзя удалить собственную учётную запись.');
-        }
-
-        if ($target->highestRoleLevel() >= $actor->highestRoleLevel()) {
-            return Response::deny('Нельзя удалить пользователя с равными или большими правами.');
-        }
-
-        return Response::allow();
+        return $this->manage($actor, $target, 'Нельзя удалить собственную учётную запись.', 'удалить');
     }
 
     public function manageRoleAccess(User $actor, int $roleLevel): Response
@@ -65,5 +41,15 @@ class UserPolicy
         }
 
         return Response::allow();
+    }
+
+    private function manage(User $actor, User $target, string $selfMessage, string $verb): Response
+    {
+        return match (true) {
+            ! $actor->can(PermissionCode::ManageUsers->value) => Response::deny('Недостаточно прав для управления пользователями.'),
+            $actor->is($target) => Response::deny($selfMessage),
+            $target->highestRoleLevel() >= $actor->highestRoleLevel() => Response::deny("Нельзя {$verb} пользователя с равными или большими правами."),
+            default => Response::allow(),
+        };
     }
 }

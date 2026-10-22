@@ -8,18 +8,12 @@ use App\Enums\DuckKind;
 use App\Models\GameRound;
 use Random\Randomizer;
 
-/**
- * Раскладка раунда: какие утки, когда взлетают и через какие точки летят.
- * Браузер получает её целиком и рисует, а ShotJudge по ней же проверяет выстрелы.
- *
- * @phpstan-import-type Plan from GameRound
- */
+// Браузер рисует раскладку целиком, ShotJudge по ней же проверяет выстрелы
+/** @phpstan-import-type Plan from GameRound */
 class FlightPlanner
 {
-    /** Первая утка взлетает не сразу: игрок успевает навести прицел. */
     public const FIRST_MS = 1500;
 
-    /** Последняя утка улетает раньше конца раунда. */
     public const TAIL_MS = 1000;
 
     /** @return Plan */
@@ -83,12 +77,8 @@ class FlightPlanner
         return DuckKind::Mallard;
     }
 
-    /**
-     * Взлёт из камыша, несколько поворотов в небе и уход за край поля.
-     * Время в точках — от взлёта утки, в миллисекундах.
-     *
-     * @return list<array{0: int, 1: int, 2: int}>
-     */
+    // Точки [мс от взлёта, x, y]: взлёт из камыша, повороты, уход за край поля
+    /** @return list<array{0: int, 1: int, 2: int}> */
     private function flight(Randomizer $random, DuckKind $kind, int $width, int $horizon, int $maxMs): array
     {
         $points = [[$random->getInt(80, $width - 80), $horizon + 15]];
@@ -108,7 +98,7 @@ class FlightPlanner
             default => [$width + 60, $random->getInt(40, intdiv($horizon, 2))],
         };
 
-        // Короткий раунд в настройках: убираем повороты, пока утка успевает улететь
+        // В коротком раунде убираем повороты, пока утка не успеет улететь
         $path = $this->timed($points, $kind->speed());
         while ($path[array_key_last($path)][0] > $maxMs && count($points) > 2) {
             array_splice($points, 1, 1);

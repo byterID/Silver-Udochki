@@ -6,5 +6,4 @@ namespace App\Services\Wallet;
 
 use RuntimeException;
 
-/** Операция по кошельку невозможна. Текст сообщения можно показывать пользователю. */
 final class WalletException extends RuntimeException {}

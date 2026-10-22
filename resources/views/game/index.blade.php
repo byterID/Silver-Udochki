@@ -1,4 +1,4 @@
-@php($money = fn (int $v) => number_format($v, 0, ',', ' ').' ₽')
+@php($money = App\Support\Money::format(...))
 
 <x-app-layout>
     <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
@@ -18,7 +18,6 @@
 
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
             <section>
-                {{-- Приборы: время, патроны, добыча --}}
                 <div class="mb-2 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-t-xl bg-emerald-950 px-4 py-2 text-sm text-amber-50">
                     <span class="flex items-center gap-2">
                         ⏱ <span class="w-8 font-mono font-semibold" x-text="phase === 'playing' ? seconds + ' с' : '—'">—</span>
@@ -49,7 +48,6 @@
                             style="aspect-ratio: 16 / 9"
                             role="img" aria-label="Озеро на рассвете: утки взлетают из камыша, ретривер ждёт на берегу"></canvas>
 
-                    {{-- Перед раундом --}}
                     <div x-show="phase === 'idle' || phase === 'starting'"
                          class="absolute inset-0 flex items-center justify-center bg-emerald-950/45 p-4">
                         <div class="max-w-sm rounded-xl bg-amber-50/95 p-5 text-center shadow-xl">
@@ -65,13 +63,11 @@
                         </div>
                     </div>
 
-                    {{-- Пока сервер считает --}}
                     <div x-show="phase === 'judging'" x-cloak
                          class="absolute inset-x-0 bottom-4 flex justify-center">
                         <p class="rounded-full bg-emerald-950/80 px-4 py-2 text-sm text-amber-50">Михалыч считает уток…</p>
                     </div>
 
-                    {{-- Итог раунда --}}
                     <div x-show="phase === 'result'" x-cloak
                          class="absolute inset-0 flex items-center justify-center bg-emerald-950/45 p-4">
                         <div class="w-full max-w-sm rounded-xl bg-amber-50/95 p-5 text-center shadow-xl">
@@ -105,7 +101,6 @@
             </section>
 
             <aside class="space-y-4">
-                {{-- Михалыч комментирует из-за плеча --}}
                 <div class="flex items-start gap-3">
                     <img src="{{ asset('images/shop/mikhalych.webp') }}" alt="Продавец Михалыч" width="72" height="72"
                          class="h-[72px] w-[72px] shrink-0 rounded-full bg-amber-100 object-cover object-top ring-2 ring-amber-400/70">

@@ -10,7 +10,6 @@ use App\Services\Stock\StockKeeper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Поступление (+N) или инвентаризация (ровно N) по одному товару. */
 class UpdateStockRequest extends FormRequest
 {
     public function authorize(): bool

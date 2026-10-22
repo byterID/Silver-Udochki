@@ -20,7 +20,7 @@ class StorePromotionRequest extends FormRequest
         return $this->user()?->can('create', Promotion::class) ?? false;
     }
 
-    /** id акции, которую редактируют (у новой — null). */
+    // У новой акции null, UpdatePromotionRequest возвращает id редактируемой
     protected function promotionId(): ?int
     {
         return null;
@@ -61,7 +61,7 @@ class StorePromotionRequest extends FormRequest
         ];
     }
 
-    /** Лишние для выбранного вида поля обнуляем, чтобы в БД не оставался мусор. */
+    // Чужие для выбранного вида поля обнуляем, чтобы не оставались в БД
     protected function prepareForValidation(): void
     {
         $type = PromotionType::tryFrom((string) $this->input('type'));
@@ -79,7 +79,7 @@ class StorePromotionRequest extends FormRequest
         ]);
     }
 
-    /** Товары существуют и не участвуют в других акциях. Одним запросом, а не по запросу на товар. */
+    // У товара может быть только одна акция (product_id уникален в promotion_product)
     public function after(): array
     {
         return [function (Validator $validator): void {

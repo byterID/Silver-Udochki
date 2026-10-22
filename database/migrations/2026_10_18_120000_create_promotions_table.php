@@ -13,13 +13,10 @@ return new class extends Migration
             $table->string('title');
             $table->string('note')->nullable();
             $table->string('type', 20);
-            // Проценты (percent) или рубли (fixed); для free_delivery пусто
             $table->unsignedInteger('value')->nullable();
-            // Промокод хранится в верхнем регистре, только у fixed
             $table->string('code', 32)->nullable()->unique();
             $table->unsignedInteger('max_uses')->nullable();
             $table->unsignedInteger('used_count')->default(0);
-            // Порог бесплатной доставки, только у free_delivery
             $table->unsignedInteger('min_order_amount')->nullable();
             $table->string('color', 7)->default('#fde68a');
             $table->timestamp('starts_at')->nullable();
@@ -30,7 +27,6 @@ return new class extends Migration
             $table->index(['type', 'is_active']);
         });
 
-        // Один товар может участвовать только в одной акции
         Schema::create('promotion_product', function (Blueprint $table) {
             $table->foreignId('promotion_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->unique()->constrained()->cascadeOnDelete();

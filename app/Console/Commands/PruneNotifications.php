@@ -19,7 +19,6 @@ final class PruneNotifications extends Command
     {
         $threshold = now()->subDays(Config::integer('tasks.notifications_ttl_days'));
 
-        // Одним DELETE: строки маленькие, событий и наблюдателей на них нет
         $deleted = DatabaseNotification::query()->where('created_at', '<', $threshold)->delete();
 
         if ($deleted > 0) {

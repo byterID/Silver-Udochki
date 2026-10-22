@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Requests\ControlPanel;
 
 use App\Models\User;
-use App\Rules\AssignableRole;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
-class UpdateUserRequest extends FormRequest
+class UpdateUserRequest extends StoreUserRequest
 {
     public function authorize(): bool
     {
@@ -20,24 +18,14 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            ...parent::rules(),
             'email' => [
                 'required', 'string', 'lowercase', 'email:rfc,dns', 'max:255',
                 Rule::unique(User::class, 'email')->ignore($this->targetUser()->id),
             ],
-            // Пустой пароль = не менять
+            // Пустой пароль — не менять
             'password' => ['nullable', 'string', 'confirmed', Password::defaults()],
-            'role' => ['required', 'string', new AssignableRole],
         ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'email' => is_string($this->input('email'))
-                ? mb_strtolower(trim($this->input('email')))
-                : $this->input('email'),
-        ]);
     }
 
     public function targetUser(): User

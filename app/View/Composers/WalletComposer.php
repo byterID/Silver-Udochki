@@ -9,7 +9,6 @@ use App\Services\Wallet\WalletKeeper;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/** Баланс и последние операции для меню под ником в шапке. */
 class WalletComposer
 {
     public const HISTORY_LIMIT = 10;

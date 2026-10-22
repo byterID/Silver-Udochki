@@ -78,7 +78,6 @@
             </table>
         </div>
 
-        {{-- Модалка с ползунками действий --}}
         <div x-show="showModal" x-cloak
              class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition.opacity>
             <div class="absolute inset-0 bg-black/50" @click="showModal = false"></div>
@@ -100,7 +99,6 @@
                             <input type="hidden" name="permissions[]" :value="permId">
                         </template>
 
-                        {{-- Действия, сгруппированные по заголовкам --}}
                         <template x-for="group in groupedPermissions" :key="group.name">
                             <div class="mb-3">
                                 <h3 class="mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-gray-400"

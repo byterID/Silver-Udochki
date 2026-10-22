@@ -3,7 +3,7 @@
 @tailwind utilities;
 [x-cloak] { display: none !important; }
 
-/* ===== Корзина ===== */
+/* Корзина */
 @keyframes basket-wobble {
     0%, 100% { transform: rotate(0); }
     20% { transform: rotate(-7deg); }
@@ -29,7 +29,7 @@
     .basket-wobble, .basket-item { animation: none; }
 }
 
-/* ===== Деревянная стена лавки ===== */
+/* Деревянная стена лавки */
 .shop-wall {
     background-color: #3b2412;
     background-image:
@@ -38,7 +38,7 @@
         linear-gradient(180deg, #5a3a1e 0%, #3b2412 100%);
 }
 
-/* ===== Прилавок и продавец ===== */
+/* Прилавок и продавец */
 .counter-planks {
     background-image:
         repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0 2px, transparent 2px 160px),
@@ -59,7 +59,7 @@
     .seller-idle, .seller-eyes, .seller-talking .mouth-open { animation: none; }
 }
 
-/* ===== Сцена лавки ===== */
+/* Сцена лавки */
 .shop-page {
     --nav-h: 4.25rem;   /* шапка: h-16 + border-b-4 */
     --vh: calc(100dvh - var(--nav-h));
@@ -185,7 +185,7 @@
     .shop-dock { right: 16rem; }
 }
 
-/* ===== Табличка «Каталог»: только подсветка, без движения ===== */
+/* Табличка «Каталог»: только подсветка, без движения */
 .catalog-stand {
     position: absolute;
     left: var(--stand-x); top: var(--stand-y); width: var(--stand-w);
@@ -234,7 +234,7 @@
 @keyframes stand-hint { 0%, 80%, 100% { opacity: 0; } 90% { opacity: .45; } }
 @keyframes stand-shine { to { left: 130%; } }
 
-/* ===== Монитор-каталог ===== */
+/* Монитор-каталог */
 .pc-bezel {
     border-radius: 1.75rem; padding: .75rem .75rem .5rem;
     background: linear-gradient(180deg, #3a3632, #1f1c1a);
@@ -259,11 +259,8 @@
 
 .pc-screen__content { background: #f3e7c9; color: #292524; }
 
-/* ===== Включение монитора =====
-   Без .is-lit монитор прозрачный, а экран закрыт шторкой — так выглядит первый кадр.
-   Переход берётся из целевого состояния:
-   открытие — монитор 200 мс, потом шторка уходит за 450 мс;
-   закрытие — шторка 120 мс, потом монитор исчезает за 160 мс (CLOSE_MS в catalog-monitor.js). */
+/* Без .is-lit монитор прозрачный и закрыт шторкой. Открытие: монитор 200 мс, затем шторка 450 мс.
+   Закрытие: шторка 120 мс, затем монитор 160 мс (CLOSE_MS в catalog-monitor.js) */
 .catalog-monitor__backdrop {
     opacity: 0;
     transition: opacity .16s ease-in .12s;
@@ -328,7 +325,7 @@
     .catalog-stand:hover .catalog-stand__screen::after { animation: none; }
 }
 
-/* ===== Михалыч ===== */
+/* Михалыч */
 .mikhalych {
     /* Глаза и рот в % от картинки 764×1024. Подгонять здесь */
     --eye-l-x: 42.4%; --eye-r-x: 53.1%; --eye-y: 24.2%;

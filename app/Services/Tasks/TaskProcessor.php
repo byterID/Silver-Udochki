@@ -16,15 +16,10 @@ use Throwable;
 
 final class TaskProcessor
 {
-    public const DLQ_TOPIC = 'tasks.requested.dlq';
-
-    public function __construct(
-        private readonly TaskCompletedPublisher $completed,
-    ) {}
+    public function __construct(private readonly TaskEvents $events) {}
 
     public function handle(ConsumerMessage $message): void
     {
-        // 1. Проверяем, что сообщение вообще похоже на наше
         $body = $message->getBody();
         $taskId = is_array($body) ? ($body['task_id'] ?? null) : null;
 
@@ -34,7 +29,6 @@ final class TaskProcessor
             return;
         }
 
-        // 2. Атомарно захватываем задачу
         $task = $this->claim($taskId);
         if ($task === null) {
             Log::info('Задача уже обработана или в работе, пропускаю', ['task_id' => $taskId]);
@@ -44,7 +38,6 @@ final class TaskProcessor
 
         Log::info('Взял задачу', ['task_id' => $task->id, 'partition' => $message->getPartition(), 'offset' => $message->getOffset()]);
 
-        // 3. Выполняем
         try {
             $path = app($task->type->runnerClass())->run($task);
 
@@ -62,10 +55,11 @@ final class TaskProcessor
 
             report($e);
         }
-        // 4. Сообщаем миру о завершении (и для done, и для failed)
-        $this->completed->publish($task);
+
+        $this->events->completed($task);
     }
 
+    // Атомарный UPDATE ... WHERE status = pending: повтор сообщения из Kafka задачу второй раз не возьмёт
     private function claim(string $taskId): ?Task
     {
         $claimed = Task::query()
@@ -84,7 +78,7 @@ final class TaskProcessor
     private function toDeadLetter(ConsumerMessage $message, string $reason): void
     {
         Kafka::publish()
-            ->onTopic(self::DLQ_TOPIC)
+            ->onTopic(TaskEvents::DEAD_LETTER)
             ->withBodyKey('reason', $reason)
             ->withBodyKey('original', $message->getBody())
             ->withBodyKey('source_partition', $message->getPartition())

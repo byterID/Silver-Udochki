@@ -17,7 +17,6 @@ use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
-/** Возврат по заказу: деньги на кошелёк, товары на склад, частичные возвраты. */
 class OrderReturnTest extends TestCase
 {
     use RefreshDatabase;
@@ -32,14 +31,10 @@ class OrderReturnTest extends TestCase
         $this->buyer = User::factory()->create();
     }
 
-    /**
-     * Оформляет заказ через корзину, как покупатель.
-     *
-     * @param  array<int, int>  $items  product_id => qty
-     */
+    /** @param  array<int, int>  $items  product_id => qty */
     private function order(array $items, int $total, ?string $code = null): Order
     {
-        $payload = collect($items)->map(fn ($qty, $id) => ['id' => $id, 'qty' => $qty])->values()->all();
+        $payload = $this->cartItems($items);
 
         if ($code !== null) {
             $this->actingAs($this->buyer)
@@ -67,7 +62,7 @@ class OrderReturnTest extends TestCase
     private function returnItems(Order $order, array $lines, string $reason = 'not_suitable', ?string $comment = null, ?string $key = null, ?User $as = null): TestResponse
     {
         return $this->actingAs($as ?? $this->buyer)->postJson(route('orders.returns.store', $order), [
-            'items' => collect($lines)->map(fn ($qty, $id) => ['id' => $id, 'qty' => $qty])->values()->all(),
+            'items' => $this->cartItems($lines),
             'reason' => $reason,
             'comment' => $comment,
             'key' => $key ?? (string) Str::uuid(),

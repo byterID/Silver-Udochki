@@ -9,9 +9,7 @@ class Permission extends SpatiePermission
 {
     protected $fillable = ['name', 'title', 'action_group_id', 'guard_name'];
 
-    /**
-     * @return BelongsTo<ActionGroup, $this>
-     */
+    /** @return BelongsTo<ActionGroup, $this> */
     public function actionGroup(): BelongsTo
     {
         return $this->belongsTo(ActionGroup::class);

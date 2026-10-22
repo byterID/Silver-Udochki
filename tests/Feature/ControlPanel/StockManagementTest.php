@@ -8,7 +8,6 @@ use App\Enums\PermissionCode;
 use App\Enums\RoleName;
 use App\Models\Product;
 use App\Models\StockMovement;
-use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -23,14 +22,6 @@ class StockManagementTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
-    }
-
-    private function userWithRole(RoleName $role): User
-    {
-        $user = User::factory()->create(['email_verified_at' => now()]);
-        $user->syncRoles([$role->value]);
-
-        return $user->fresh();
     }
 
     public function test_менеджер_видит_склад_и_меняет_остатки(): void

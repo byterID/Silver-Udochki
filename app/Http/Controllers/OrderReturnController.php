@@ -13,13 +13,9 @@ use App\Services\Orders\ReturnException;
 use App\Services\Wallet\WalletKeeper;
 use Illuminate\Http\JsonResponse;
 
-/** Форма «Оформить возврат» из окна «Мои заказы». */
 class OrderReturnController extends Controller
 {
-    /**
-     * 201 — возврат оформлен (200 — повтор попытки с тем же ключом, возврат тот же).
-     * 422 — вернуть нельзя: срок вышел, уже вернули, ошибка в форме.
-     */
+    // 200 вместо 201 — повтор с тем же ключом вернул уже оформленный возврат
     public function store(ReturnOrderRequest $request, Order $order, OrderRefunder $refunder, WalletKeeper $wallets): JsonResponse
     {
         /** @var User $user */

@@ -2,7 +2,7 @@ function csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 }
 
-/** JSON-запрос к лавке с CSRF-токеном. Не бросает на 4xx/5xx: смотрите ok и status. */
+// Не бросает на 4xx/5xx, только при обрыве сети: смотрите ok и status
 export async function send(method, url, body = null) {
     const res = await fetch(url, {
         method,
@@ -18,10 +18,7 @@ export async function send(method, url, body = null) {
     return { ok: res.ok, status: res.status, data };
 }
 
-/**
- * Ключ попытки (оформление, возврат): повтор с тем же ключом сервер не проведёт дважды.
- * randomUUID есть только в защищённом контексте (https, localhost).
- */
+// Ключ попытки: повтор с ним сервер не проведёт дважды. randomUUID есть только на https и localhost
 export function newRequestKey() {
     if (window.crypto?.randomUUID) return window.crypto.randomUUID();
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\StockState;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -51,18 +52,13 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Акция со скидкой на товар. Связь «многие ко многим» только по форме:
-     * product_id в promotion_product уникален, так что акция не больше одной.
-     *
-     * @return BelongsToMany<Promotion, $this>
-     */
+    // Многие-ко-многим только по форме: product_id в promotion_product уникален
+    /** @return BelongsToMany<Promotion, $this> */
     public function promotions(): BelongsToMany
     {
         return $this->belongsToMany(Promotion::class, 'promotion_product');
     }
 
-    /** Товар ещё есть, но осталось мало: карточка подписывает это красным. */
     public function isLowStock(): bool
     {
         return $this->stock > 0 && $this->stock <= (int) config('shop.low_stock');
@@ -72,5 +68,16 @@ class Product extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
+    }
+
+    /** @param Builder<Product> $query */
+    public function scopeInStockState(Builder $query, StockState $state): void
+    {
+        $column = $query->qualifyColumn('stock');
+
+        match ($state) {
+            StockState::Low => $query->whereBetween($column, [1, (int) config('shop.low_stock')]),
+            StockState::Out => $query->where($column, 0),
+        };
     }
 }

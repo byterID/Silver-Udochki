@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Сколько штук строки заказа вернули этим возвратом.
- *
  * @property int $id
  * @property int $order_return_id
  * @property int $order_item_id

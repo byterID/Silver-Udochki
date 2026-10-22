@@ -14,7 +14,6 @@ return new class extends Migration
             $table->timestamp('notified_at')->nullable();
         });
 
-        // Задачи из прошлых экспериментов считаем уже обработанными
         DB::table('tasks')
             ->whereNotNull('finished_at')
             ->update([

@@ -3,11 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-/*
- * Уже зарегистрированным пользователям — кошелёк с приветственными 20 000 ₽.
- * Новым их начисляет слушатель Registered. Сумма зашита константой, а не берётся
- * из config/shop.php: миграция должна давать один результат, когда бы её ни запустили.
- */
+// Сумма константой, а не из config: миграция даёт один результат, когда бы её ни запустили
 return new class extends Migration
 {
     private const WELCOME_BALANCE = 20_000;
@@ -42,8 +38,5 @@ return new class extends Migration
             });
     }
 
-    public function down(): void
-    {
-        // Кошельки удаляет откат предыдущей миграции вместе с таблицами
-    }
+    public function down(): void {}
 };

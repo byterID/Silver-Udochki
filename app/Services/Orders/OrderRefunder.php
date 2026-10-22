@@ -19,13 +19,7 @@ use App\Services\Wallet\WalletKeeper;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Возврат по заказу: заявка, товары обратно на склад и деньги на кошелёк —
- * одна транзакция. Можно вернуть часть заказа, а остальное позже.
- *
- * Блокировки в том же порядке, что у оформления (кошелёк → … → товары по id),
- * поэтому возврат и параллельный заказ того же покупателя не ловят взаимную блокировку.
- */
+// Блокировки в том же порядке, что в OrderPlacer (кошелёк → … → товары по id)
 class OrderRefunder
 {
     public function __construct(
@@ -35,7 +29,7 @@ class OrderRefunder
 
     /**
      * @param  array<int, int>  $quantities  order_item_id => сколько штук вернуть
-     * @param  string  $key  ключ идемпотентности: повтор с ним вернёт уже оформленный возврат
+     * @param  string  $key  повтор с тем же ключом вернёт уже оформленный возврат
      *
      * @throws ReturnException
      */
@@ -55,7 +49,7 @@ class OrderRefunder
         try {
             return DB::transaction(fn (): OrderReturn => $this->refundLocked($user, $wallet, $order, $quantities, $reason, $comment, $key));
         } catch (UniqueConstraintViolationException $e) {
-            // Запасной путь: возврат с тем же ключом уже записан параллельным запросом
+            // Параллельный запрос с тем же ключом успел первым
             return $this->done($order, $key) ?? throw $e;
         } catch (WalletException|StockException $e) {
             throw new ReturnException($e->getMessage(), previous: $e);
@@ -66,14 +60,13 @@ class OrderRefunder
     private function refundLocked(User $user, Wallet $wallet, Order $order, array $quantities, ReturnReason $reason, ?string $comment, string $key): OrderReturn
     {
         Wallet::query()->lockForUpdate()->findOrFail($wallet->id);
-        // Возвраты одного заказа идут строго по очереди: счётчики возвращённых штук не разъедутся
+        // Возвраты заказа идут по очереди, иначе разъедутся счётчики возвращённых штук
         Order::query()->lockForUpdate()->findOrFail($order->id);
 
         if (($done = $this->done($order, $key)) !== null) {
             return $done;
         }
 
-        // Заказ и счётчики возвратов — свежие, после блокировки
         $order = Order::query()->withReturns()->findOrFail($order->id);
         $this->ensureReturnable($order, $quantities);
 
@@ -99,14 +92,12 @@ class OrderRefunder
             }
         }
 
-        // Товара могло уже не остаться в каталоге (восстановление каталога его стёрло):
-        // тогда возвращать на склад нечего, а деньги покупатель всё равно получает
+        // Товар мог исчезнуть при восстановлении каталога: на склад нечего вернуть, деньги — всё равно
         $products = Product::query()->whereKey(array_keys($byProduct))->orderBy('id')->lockForUpdate()->get();
         foreach ($products as $product) {
             $this->stock->putBack($product, $byProduct[$product->id], $order, $user);
         }
 
-        // Заказ, оплаченный целиком промокодом, возвращается без денег
         if ($amount > 0) {
             $this->wallets->credit($user, $amount, WalletReason::Refund, 'return:'.$return->id, 'Заказ '.$order->number());
         }
@@ -143,17 +134,12 @@ class OrderRefunder
         }
     }
 
+    // Оплаченное за товары делится по стоимости строк нарастающим итогом от всех возвратов:
+    // частичные возвраты в сумме дают ровно оплаченное без ошибки округления.
+    // Доставка — только с последним товаром. Та же формула в orders.js
     /**
-     * Сколько вернуть на кошелёк и возвращается ли теперь заказ целиком.
-     *
-     * Оплаченное за товары делится по стоимости строк, так что скидка по промокоду
-     * ложится на каждую строку по её доле. Считаем нарастающим итогом от всех
-     * возвратов заказа: несколько частичных возвратов в сумме дают ровно оплаченное,
-     * округление не набегает. Доставка возвращается только вместе с последним товаром.
-     * Ту же формулу считает окно возврата в orders.js.
-     *
      * @param  array<int, int>  $quantities
-     * @return array{int, bool}
+     * @return array{int, bool} сумма и вернули ли заказ целиком
      */
     private function amountFor(Order $order, array $quantities): array
     {

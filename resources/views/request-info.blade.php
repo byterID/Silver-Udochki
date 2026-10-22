@@ -13,7 +13,6 @@
                 Ниже ваш собственный запрос в том виде, в каком он дошёл до PHP.
             </p>
 
-            {{-- 1. Сводка --}}
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                 <h3 class="px-6 pt-6 pb-2 font-semibold text-gray-800">Сводка</h3>
                 <table class="w-full text-sm">
@@ -29,7 +28,6 @@
                 </table>
             </div>
 
-            {{-- 2. Прокси-заголовки --}}
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                 <h3 class="px-6 pt-6 pb-2 font-semibold text-gray-800">Прокси-заголовки</h3>
                 <p class="px-6 pb-2 text-xs text-gray-500">
@@ -51,7 +49,6 @@
                 </table>
             </div>
 
-            {{-- 3. Все заголовки --}}
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                 <h3 class="px-6 pt-6 pb-2 font-semibold text-gray-800">
                     Все заголовки запроса ({{ $headers->count() }})
@@ -71,7 +68,6 @@
                 </table>
             </div>
 
-            {{-- 4. Переменные nginx --}}
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                 <h3 class="px-6 pt-6 pb-2 font-semibold text-gray-800">Что nginx добавил от себя</h3>
                 <p class="px-6 pb-2 text-xs text-gray-500">

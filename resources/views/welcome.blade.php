@@ -4,24 +4,20 @@
 
         <div x-data="shopFront(@js($front))" @keydown.window="hotkey($event)">
 
-            {{-- Сцена: фон лавки и всё, что на нём --}}
             <div class="shop-scene">
                 <img src="{{ asset('images/shop/shop-bg.webp') }}" alt="" width="1024" height="572"
                      class="shop-scene__bg" fetchpriority="high" draggable="false">
 
-                {{-- Доска акций --}}
                 <div x-data="promoBoard(@js($promos))"
                      class="shop-scene__board flex-col font-hand text-white/90"
                      :class="promoFlash && 'is-flashing'" aria-label="Акции">
                     @include('shop.partials.promo-slides')
                 </div>
 
-                {{-- Продавец --}}
                 <div class="shop-scene__seller">
                     <x-shop-seller />
                 </div>
 
-                {{-- Табличка-каталог --}}
                 <button type="button" x-ref="catalogStand" @click="openCatalog()"
                         class="catalog-stand" aria-label="Открыть каталог" aria-haspopup="dialog">
                     <span class="catalog-stand__body">
@@ -31,12 +27,10 @@
                     <span class="catalog-stand__hit" aria-hidden="true"></span>
                 </button>
 
-                {{-- Колокольчик --}}
                 <button type="button" @click="ringBell()" class="shop-scene__bell"
                         title="Позвонить: продавец спросит что-нибудь ещё" aria-label="Позвонить в колокольчик">🛎️</button>
             </div>
 
-            {{-- Акции на телефоне и узком экране --}}
             <div x-data="promoBoard(@js($promos))"
                  class="promo-mobile mx-3 mt-3 flex-col rounded border-4 border-amber-900 bg-[#2f3b2f] px-4 py-3 font-hand text-lg text-white/90 shadow-lg transition"
                  :class="promoFlash && 'ring-4 ring-yellow-300'">
@@ -44,7 +38,6 @@
                 @include('shop.partials.promo-slides')
             </div>
 
-            {{-- Диалог с продавцом (на большом экране стоит на прилавке) --}}
             <div class="shop-dock">
                 <div class="relative mx-auto max-w-3xl rounded-xl border-4 border-amber-900 bg-stone-900/90 text-amber-50 shadow-2xl backdrop-blur-sm">
                     <span class="absolute -top-3.5 left-4 rounded-md border-2 border-amber-950 bg-amber-800 px-3 py-0.5 text-sm font-bold tracking-wide">

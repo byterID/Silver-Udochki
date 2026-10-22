@@ -68,7 +68,6 @@
             @endif
 
             <div class="flex flex-col gap-6">
-                {{-- Вид акции --}}
                 <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                     <h2 class="mb-3 font-semibold text-gray-800">Вид акции</h2>
                     <div class="grid gap-3 sm:grid-cols-3">
@@ -90,7 +89,6 @@
                     @error('type') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
                 </section>
 
-                {{-- Основное --}}
                 <section class="grid gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:grid-cols-2">
                     <h2 class="font-semibold text-gray-800 sm:col-span-2">Что видит покупатель</h2>
 
@@ -108,7 +106,6 @@
                         @error('note') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- Размер выгоды --}}
                     <div x-show="type === 'percent'">
                         <label for="value-percent" class="{{ $label }}">Скидка, %</label>
                         <input id="value-percent" type="number" name="value" min="1" max="99" step="1"
@@ -130,7 +127,6 @@
                     </div>
                     @error('value') <p class="text-sm text-red-600 sm:col-span-2">{{ $message }}</p> @enderror
 
-                    {{-- Промокод --}}
                     <template x-if="type === 'fixed'">
                         <div class="grid gap-4 sm:col-span-2 sm:grid-cols-2">
                             <div>
@@ -159,7 +155,6 @@
                     @error('max_uses') <p class="text-sm text-red-600 sm:col-span-2">{{ $message }}</p> @enderror
                 </section>
 
-                {{-- Товары --}}
                 <section x-show="type === 'percent'" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                         <h2 class="font-semibold text-gray-800">Товары со скидкой</h2>
@@ -177,7 +172,6 @@
                         </div>
                     </template>
 
-                    {{-- Выбранные --}}
                     <div x-show="selected.length" class="mb-4 flex max-h-48 flex-wrap gap-1.5 overflow-y-auto rounded-lg bg-gray-50 p-2">
                         <template x-for="p in selected" :key="p.id">
                             <span class="inline-flex items-center gap-1 rounded-full bg-white py-0.5 pl-2.5 pr-1 text-xs ring-1"
@@ -190,7 +184,6 @@
                         </template>
                     </div>
 
-                    {{-- Поиск --}}
                     <div class="relative">
                         <label for="product-search" class="sr-only">Поиск товаров</label>
                         <input id="product-search" type="search" x-model="query" @input="search()" @keydown.enter.prevent="search(true)"
@@ -235,7 +228,6 @@
                     @error('products') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
                 </section>
 
-                {{-- Период --}}
                 <section class="grid gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:grid-cols-2">
                     <h2 class="font-semibold text-gray-800 sm:col-span-2">Когда действует</h2>
                     <div>
@@ -259,7 +251,6 @@
                 </section>
             </div>
 
-            {{-- Справа: цвет и превью --}}
             <aside class="flex flex-col gap-6">
                 <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                     <h2 class="mb-3 font-semibold text-gray-800">Цвет мела</h2>

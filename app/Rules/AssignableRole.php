@@ -29,14 +29,7 @@ class AssignableRole implements ValidationRule
             return;
         }
 
-        $actorLevel = $actor->highestRoleLevel();
-        $strict = (bool) config('access.strict_hierarchy', true);
-
-        $tooHigh = $strict
-            ? $role->level() >= $actorLevel
-            : $role->level() > $actorLevel;
-
-        if ($tooHigh) {
+        if (! $role->isAssignableBy($actor->highestRoleLevel())) {
             $fail(sprintf(
                 'Вы не можете назначить роль «%s»: она равна вашей или выше.',
                 $role->label()

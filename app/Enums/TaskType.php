@@ -31,7 +31,7 @@ enum TaskType: string
         };
     }
 
-    /** Право, без которого задачу нельзя ни запустить, ни выполнить. null — доступна всем. */
+    // Проверяется и при запуске, и в воркере. null — доступна всем
     public function permission(): ?PermissionCode
     {
         return match ($this) {

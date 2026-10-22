@@ -2,11 +2,11 @@ import { plural } from './promo-board';
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Полное время закрытия: шторка 120 мс + исчезновение монитора 160 мс (см. app.css, .catalog-monitor)
+// Шторка 120 мс + исчезновение монитора 160 мс, см. .catalog-monitor в app.css
 const CLOSE_MS = 300;
 
 export default function registerCatalogMonitor(Alpine) {
-    // Открыт ли монитор: лавке нужно, чтобы не ловить горячие клавиши под ним
+    // Лавка не ловит горячие клавиши, пока монитор открыт
     Alpine.store('catalogMonitor', { open: false });
 
     Alpine.data('catalogMonitor', (cfg) => ({
@@ -36,7 +36,6 @@ export default function registerCatalogMonitor(Alpine) {
         show({ chapter = null, from = null } = {}) {
             if (this.open && !this.closing) return;
 
-            // Открыли заново, пока закрывался: просто снова зажигаем
             clearTimeout(this.closeTimer);
             this.closing = false;
 
@@ -52,8 +51,7 @@ export default function registerCatalogMonitor(Alpine) {
             clearInterval(this.clockTimer);
             this.clockTimer = setInterval(() => this.tickClock(), 15000);
 
-            // Первый кадр браузер рисует в тёмном состоянии из CSS,
-            // и только потом включаем переход — поэтому вспышки нет
+            // Переход включаем после первого кадра в тёмном состоянии, иначе монитор вспыхивает
             this.$nextTick(() => {
                 requestAnimationFrame(() => requestAnimationFrame(() => {
                     this.lit = true;

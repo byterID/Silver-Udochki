@@ -12,10 +12,7 @@ export function plural(n, [one, few, many]) {
 
 const pad = (x) => String(x).padStart(2, '0');
 
-/**
- * Насколько близок конец акции: от этого зависит вид на доске (классы promo-stage-* в app.css).
- * soon — меньше 3 дней, ending — последние сутки, burning — последний час.
- */
+// Классы promo-stage-* в app.css: soon — меньше 3 дней, ending — сутки, burning — час
 export function promoStage(ends, now = Date.now()) {
     if (!ends) return 'calm';
     const ms = ends - now;
@@ -41,7 +38,6 @@ export function timeLeft(ends, now = Date.now()) {
     return `осталось ${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
-/** Доска акций: листает предложения, считает время до конца, прячет истёкшие. */
 export default function registerPromoBoard(Alpine) {
     Alpine.data('promoBoard', (items = []) => ({
         items,

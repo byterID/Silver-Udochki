@@ -18,12 +18,9 @@ class UserService
             $user = new User([
                 'name' => $data['name'],
                 'email' => $data['email'],
-                // Хэширование делает каст 'hashed' в модели — Hash::make не нужен
                 'password' => $data['password'],
             ]);
 
-            // email_verified_at не входит в Fillable, поэтому ставим его через forceFill,
-            // иначе в строгом режиме (shouldBeStrict) будет MassAssignmentException.
             $user->forceFill(['email_verified_at' => now()])->save();
 
             $user->syncRoles([$data['role']]);
@@ -44,7 +41,6 @@ class UserService
                 'email' => $data['email'],
             ]);
 
-            // Сменили email — подтверждение сбрасывается.
             if ($user->isDirty('email')) {
                 $user->email_verified_at = null;
             }

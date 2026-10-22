@@ -36,13 +36,19 @@ enum RoleName: string
         return $this->level() >= self::Manager->level();
     }
 
+    // При strict_hierarchy свою роль назначить нельзя, только ниже
+    public function isAssignableBy(int $actorLevel): bool
+    {
+        return config('access.strict_hierarchy', true)
+            ? $this->level() < $actorLevel
+            : $this->level() <= $actorLevel;
+    }
+
+    /** @return list<string> */
     public function defaultPermissions(): array
     {
         return match ($this) {
-            self::Admin => array_map(
-                fn (PermissionCode $c) => $c->value,
-                PermissionCode::cases()
-            ),
+            self::Admin => PermissionCode::values(),
             self::Manager => [
                 PermissionCode::AccessControlPanel->value,
                 PermissionCode::ManageUsers->value,
@@ -58,19 +64,16 @@ enum RoleName: string
         };
     }
 
-    public static function staffCases(): array
+    /** @return list<string> */
+    public static function staffValues(): array
     {
-        return array_values(array_filter(
-            self::cases(),
-            fn (self $role) => $role->isStaff()
+        return array_values(array_map(
+            fn (self $r) => $r->value,
+            array_filter(self::cases(), fn (self $role) => $role->isStaff()),
         ));
     }
 
-    public static function staffValues(): array
-    {
-        return array_map(fn (self $r) => $r->value, self::staffCases());
-    }
-
+    /** @return list<string> */
     public static function customerValues(): array
     {
         return [self::User->value, self::Guest->value];

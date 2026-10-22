@@ -13,13 +13,14 @@ class CartTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @param array<int, int> $items id => qty */
+    /**
+     * @param  array<int, int>  $items  id => qty
+     * @param  array<string, mixed>  $extra
+     * @return array<string, mixed>
+     */
     private function body(array $items, array $extra = []): array
     {
-        return [
-            'items' => collect($items)->map(fn ($qty, $id) => ['id' => $id, 'qty' => $qty])->values()->all(),
-            ...$extra,
-        ];
+        return ['items' => $this->cartItems($items), ...$extra];
     }
 
     public function test_цены_считает_сервер_а_не_браузер(): void

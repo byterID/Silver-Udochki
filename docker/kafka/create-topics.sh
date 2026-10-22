@@ -1,12 +1,10 @@
 #!/bin/sh
-# Создаёт топики Kafka. Безопасно запускать при каждом деплое:
-# --if-not-exists пропускает уже существующие топики.
+# Безопасно при каждом деплое: --if-not-exists пропускает существующие топики
 set -eu
 
 KAFKA="docker compose exec -T kafka /opt/kafka/bin"
-# -T отключает псевдотерминал: в CI и по SSH его нет, без флага exec падает.
+# -T: в CI и по SSH нет псевдотерминала
 
-# Kafka стартует несколько секунд после старта контейнера: ждём, пока ответит.
 i=0
 until $KAFKA/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1; do
     i=$((i + 1))

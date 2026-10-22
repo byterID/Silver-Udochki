@@ -23,14 +23,6 @@ class UserManagementTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    private function userWithRole(RoleName $role): User
-    {
-        $user = User::factory()->create(['email_verified_at' => now()]);
-        $user->syncRoles([$role->value]);
-
-        return $user->fresh();
-    }
-
     public function test_покупатель_не_попадает_в_панель(): void
     {
         $this->actingAs($this->userWithRole(RoleName::User))
@@ -109,5 +101,46 @@ class UserManagementTest extends TestCase
             ->assertForbidden();
 
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
+    }
+
+    // Успешное сохранение без сети не проверить: email:rfc,dns ходит в DNS
+    public function test_пароль_обязателен_при_создании_и_необязателен_при_изменении(): void
+    {
+        $manager = $this->userWithRole(RoleName::Manager);
+        $customer = $this->userWithRole(RoleName::User);
+        $form = ['name' => 'Рыбак', 'email' => $customer->email, 'password' => '', 'role' => RoleName::Guest->value];
+
+        $this->actingAs($manager)->post(route('control-panel.users.store'), $form)
+            ->assertSessionHasErrors(['password', 'email']);
+
+        $this->actingAs($manager)->put(route('control-panel.users.update', $customer), $form)
+            ->assertSessionDoesntHaveErrors(['password', 'role'])
+            ->assertSessionHasErrors('email');
+    }
+
+    public function test_списки_фильтруются_и_сортируются(): void
+    {
+        $manager = $this->userWithRole(RoleName::Manager);
+        $this->userWithRole(RoleName::User)->update(['name' => 'Пётр Окунев', 'email' => 'okun@example.com']);
+        $this->userWithRole(RoleName::User)->update(['name' => 'Анна Щукина', 'email' => 'pike@example.com']);
+        $this->userWithRole(RoleName::Guest)->update(['name' => 'Гость Щукин', 'email' => 'guest@example.com']);
+
+        $names = fn (array $query) => $this->actingAs($manager)
+            ->get(route('control-panel.customers', $query))
+            ->assertOk()
+            ->viewData('users')
+            ->pluck('name')
+            ->all();
+
+        $this->assertSame(['Анна Щукина', 'Гость Щукин'], $names(['name' => 'Щукин', 'sort' => 'name', 'direction' => 'asc']));
+        $this->assertSame(['Пётр Окунев'], $names(['email' => 'OKUN']));
+        $this->assertSame(['Гость Щукин'], $names(['role' => 'guest']));
+        // Роль сотрудника в списке покупателей не применяется как фильтр
+        $this->assertCount(3, $names(['role' => 'admin']));
+
+        $this->assertSame(
+            [RoleName::User, RoleName::Guest],
+            $this->actingAs($manager)->get(route('control-panel.staff'))->viewData('roles'),
+        );
     }
 }

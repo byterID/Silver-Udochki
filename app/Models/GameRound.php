@@ -11,8 +11,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Раунд мини-игры. Создаёт и закрывает только GameMaster.
- *
  * @phpstan-type Duck array{id: int, kind: string, points: int, radius: int, path: list<array{0: int, 1: int, 2: int}>}
  * @phpstan-type Plan array{field: array{width: int, height: int, horizon: int}, duration_ms: int, magazine: int, reload_ms: int, min_interval_ms: int, rate: int, ducks: list<Duck>}
  *
@@ -56,7 +54,6 @@ class GameRound extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** Когда утки улетят и можно подводить итог. */
     public function endsAt(): Carbon
     {
         return $this->started_at->copy()->addMilliseconds($this->plan['duration_ms']);

@@ -8,20 +8,15 @@ use App\Services\Game\ShotJudge;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-/**
- * Выстрелы раунда: когда (мс от начала) и куда (координаты поля).
- * Здесь только форма данных, правдоподобие проверяет ShotJudge.
- *
- * @phpstan-import-type Shot from ShotJudge
- */
+// Только форма данных, правдоподобие выстрелов проверяет ShotJudge
+/** @phpstan-import-type Shot from ShotJudge */
 class FinishGameRoundRequest extends FormRequest
 {
-    /** Больше за раунд не выстрелить даже с самой быстрой перезарядкой. */
     public const MAX_SHOTS = 300;
 
     public function authorize(): bool
     {
-        return true; // владельца раунда проверяет GameRoundPolicy на маршруте
+        return true; // владельца проверяет can:play на маршруте
     }
 
     /** @return array<string, ValidationRule|array<mixed>|string> */

@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/** Колокольчик: очистка прочитанных и автоудаление старых уведомлений. */
 class NotificationTest extends TestCase
 {
     use RefreshDatabase;

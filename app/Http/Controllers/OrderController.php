@@ -15,7 +15,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
-/** Оформление заказа из корзины и окно «Мои заказы». */
 class OrderController extends Controller
 {
     public const HISTORY_LIMIT = 30;
@@ -35,11 +34,7 @@ class OrderController extends Controller
         return OrderResource::collection($orders);
     }
 
-    /**
-     * 201 — заказ оформлен (200 — повтор попытки с тем же ключом, заказ тот же).
-     * 409 — корзина разошлась с сервером: в ответе свежий расчёт, покупатель проверяет и жмёт ещё раз.
-     * 422 — не хватает денег или корзина пуста.
-     */
+    // 200 — повтор с тем же ключом. 409 — корзина разошлась с сервером, в ответе свежий расчёт
     public function store(PlaceOrderRequest $request, OrderPlacer $placer, WalletKeeper $wallets): JsonResponse
     {
         /** @var User $user */

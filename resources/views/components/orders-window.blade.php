@@ -1,4 +1,4 @@
-{{-- Окно «Мои заказы»: открывается событием orders-open. Поверх него — форма возврата --}}
+{{-- Открывается событием orders-open, поверх — форма возврата --}}
 <div x-data="ordersWindow(@js(route('orders.index')), @js(App\Enums\ReturnReason::options()))"
      @orders-open.window="show($event.detail?.highlight ?? null)"
      @keydown.escape.window="close()"
@@ -93,7 +93,6 @@
         </div>
     </div>
 
-    {{-- Форма возврата --}}
     <template x-if="returning">
         <div class="fixed inset-0 z-[60] flex items-center justify-center p-4"
              role="dialog" aria-modal="true" aria-labelledby="return-title">
