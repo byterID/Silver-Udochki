@@ -3,14 +3,12 @@
 declare(strict_types=1);
 
 return [
-    // Сколько раз воркер может взяться за одну задачу
     'max_attempts' => 3,
 
-    // Через сколько минут задача в processing считается зависшей.
-    // Должно быть заметно больше самой долгой задачи (у нас максимум 60 сек).
+    // Через сколько минут processing считается зависшей. Больше самой долгой задачи (60 сек)
     'stale_after_minutes' => (int) env('TASKS_STALE_AFTER_MINUTES', 10),
 
-    // Сколько секунд даём TaskDispatcher, чтобы опубликовать задачу самому
+    // Сколько секунд даём веб-запросу опубликовать задачу, прежде чем это сделает tasks:reconcile
     'publish_grace_seconds' => 60,
 
     'pending_timeout_minutes' => (int) env('TASKS_PENDING_TIMEOUT_MINUTES', 60),

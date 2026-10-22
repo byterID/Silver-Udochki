@@ -6,8 +6,7 @@ namespace App\Console\Commands;
 
 use App\Enums\TaskStatus;
 use App\Models\Task;
-use App\Services\Tasks\TaskCompletedPublisher;
-use App\Services\Tasks\TaskDispatcher;
+use App\Services\Tasks\TaskEvents;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Config;
@@ -19,78 +18,54 @@ final class ReconcileTasks extends Command
 
     protected $description = 'Находит зависшие задачи и возвращает их в работу';
 
-    /** Сколько отправок в Kafka не удалось за этот запуск. */
     private int $publishErrors = 0;
 
-    public function handle(TaskDispatcher $dispatcher, TaskCompletedPublisher $completedPublisher): int
+    public function handle(TaskEvents $events): int
     {
         $staleBefore = now()->subMinutes(Config::integer('tasks.stale_after_minutes'));
         $graceBefore = now()->subSeconds(Config::integer('tasks.publish_grace_seconds'));
         $expireBefore = now()->subMinutes(Config::integer('tasks.pending_timeout_minutes'));
         $maxAttempts = Config::integer('tasks.max_attempts');
+        $stale = fn () => Task::query()->where('status', TaskStatus::Processing->value)->where('started_at', '<', $staleBefore);
+        $pending = fn () => Task::query()->where('status', TaskStatus::Pending->value);
 
-        // 1. Зависла, и попытки кончились: честно сообщаем пользователю об ошибке
-        $failed = Task::query()
-            ->where('status', TaskStatus::Processing->value)
-            ->where('started_at', '<', $staleBefore)
-            ->where('attempts', '>=', $maxAttempts)
-            ->update([
-                'status' => TaskStatus::Failed->value,
-                'error' => 'Обработка не завершилась за отведённое число попыток',
-                'finished_at' => now(),
-            ]);
+        $failed = $stale()->where('attempts', '>=', $maxAttempts)->update([
+            'status' => TaskStatus::Failed->value,
+            'error' => 'Обработка не завершилась за отведённое число попыток',
+            'finished_at' => now(),
+        ]);
 
-        // 2. Зависла, но попытки есть: возвращаем в очередь
-        $requeued = Task::query()
-            ->where('status', TaskStatus::Processing->value)
-            ->where('started_at', '<', $staleBefore)
-            ->where('attempts', '<', $maxAttempts)
-            ->update([
-                'status' => TaskStatus::Pending->value,
-                'started_at' => null,
-                'published_at' => null,
-            ]);
+        $requeued = $stale()->where('attempts', '<', $maxAttempts)->update([
+            'status' => TaskStatus::Pending->value,
+            'started_at' => null,
+            'published_at' => null,
+        ]);
 
-        // 3. Слишком долго в очереди, никто так и не взял: не держим пользователя
-        //    в «ожидании» вечно. Событие о завершении отправит шаг 6.
-        $expired = Task::query()
-            ->where('status', TaskStatus::Pending->value)
-            ->where('created_at', '<', $expireBefore)
-            ->update([
-                'status' => TaskStatus::Failed->value,
-                'error' => 'Задача не была взята в работу: обработчик недоступен',
-                'finished_at' => now(),
-            ]);
+        // Событие о завершении для них отправит шаг completed ниже
+        $expired = $pending()->where('created_at', '<', $expireBefore)->update([
+            'status' => TaskStatus::Failed->value,
+            'error' => 'Задача не была взята в работу: обработчик недоступен',
+            'finished_at' => now(),
+        ]);
 
-        // 4. Ждёт, но в Kafka так и не попала: публикуем
         $published = $this->publishEach(
-            Task::query()
-                ->where('status', TaskStatus::Pending->value)
-                ->whereNull('published_at')
-                ->where('created_at', '<', $graceBefore)
-                ->orderBy('created_at'),
-            fn (Task $task): bool => $dispatcher->publish($task),
+            $pending()->whereNull('published_at')->where('created_at', '<', $graceBefore)->orderBy('created_at'),
+            $events->requested(...),
         );
 
-        // 5. Попала в Kafka, но никто не взял (сообщение потеряно вместе с топиком
-        //    или volume): публикуем повторно. Дубли безопасны — claim() атомарен.
+        // Сообщение потерялось вместе с топиком или volume. Дубли безопасны: claim() атомарен
         $republished = $this->publishEach(
-            Task::query()
-                ->where('status', TaskStatus::Pending->value)
-                ->whereNotNull('published_at')
-                ->where('published_at', '<', $staleBefore)
-                ->orderBy('created_at'),
-            fn (Task $task): bool => $dispatcher->publish($task),
+            $pending()->where('published_at', '<', $staleBefore)->orderBy('created_at'),
+            $events->requested(...),
         );
 
-        // 6. Завершена, но событие о завершении не ушло: публикуем
         $completed = $this->publishEach(
             Task::query()
                 ->whereIn('status', [TaskStatus::Done->value, TaskStatus::Failed->value])
                 ->whereNull('completion_published_at')
                 ->where('finished_at', '<', $graceBefore)
                 ->orderBy('finished_at'),
-            fn (Task $task): bool => $completedPublisher->publish($task),
+            $events->completed(...),
         );
 
         $stats = compact('failed', 'requeued', 'expired', 'published', 'republished', 'completed');
@@ -111,10 +86,8 @@ final class ReconcileTasks extends Command
         return self::SUCCESS;
     }
 
+    // После первой неудачи останавливается: Kafka, скорее всего, недоступна
     /**
-     * Публикует задачи по одной. После первой неудачи останавливается:
-     * Kafka, скорее всего, недоступна, и остальные отправки упадут так же.
-     *
      * @param  Builder<Task>  $query
      * @param  callable(Task): bool  $publish
      */
@@ -130,7 +103,7 @@ final class ReconcileTasks extends Command
             if (! $publish($task)) {
                 $this->publishErrors++;
 
-                return false; // прерывает each()
+                return false;
             }
 
             $sent++;
