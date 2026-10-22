@@ -9,9 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Кошелёк пользователя. Баланс меняет только WalletKeeper, каждое изменение
- * — строка в wallet_transactions.
- *
  * @property int $id
  * @property int $user_id
  * @property int $balance

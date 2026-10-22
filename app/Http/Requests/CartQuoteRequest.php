@@ -7,7 +7,6 @@ namespace App\Http\Requests;
 use App\Services\Pricing\PriceCalculator;
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Корзина присылает только id и количество, цены считает сервер. */
 class CartQuoteRequest extends FormRequest
 {
     public const MAX_ITEMS = 100;
@@ -26,7 +25,7 @@ class CartQuoteRequest extends FormRequest
         ];
     }
 
-    /** @return array<int, int> product_id => количество */
+    /** @return array<int, int> product_id => количество, повторы строк сложены */
     public function quantities(): array
     {
         $result = [];

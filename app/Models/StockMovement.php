@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Строка журнала склада. Записи только добавляются, не меняются.
- *
  * @property int $id
  * @property int $product_id
  * @property string $sku
@@ -43,11 +41,8 @@ class StockMovement extends Model
         ];
     }
 
-    /**
-     * Товар может быть уже удалён из каталога: тогда остаются sku и name.
-     *
-     * @return BelongsTo<Product, $this>
-     */
+    // Товара может уже не быть в каталоге: остаются sku и name
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

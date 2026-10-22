@@ -4,11 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/*
- * Ключ идемпотентности оформления: браузер присылает один и тот же ключ,
- * пока повторяет попытку (обрыв сети, двойной клик), и второй заказ не появится.
- * Колонка nullable: старая версия приложения заказов не создаёт и о ней не знает.
- */
 return new class extends Migration
 {
     public function up(): void

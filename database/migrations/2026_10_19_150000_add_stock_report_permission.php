@@ -4,11 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 
-/*
- * Право на отчёт об остатках в отдельной группе доступа: его можно выдать роли,
- * не открывая ей сам склад. Заводится миграцией, потому что деплой не запускает сидеры.
- * Выдаём admin и manager, если роли уже есть. Коды строками, без зависимости от enum.
- */
+// Деплой не запускает сидеры, поэтому права заводит миграция. Коды строками: миграция
+// не должна зависеть от enum. Роли admin и manager получают права, если уже существуют
 return new class extends Migration
 {
     private const GROUP = 'Создание отчёта остатков';
@@ -59,7 +56,6 @@ return new class extends Migration
             ->where('guard_name', 'web')
             ->delete();
 
-        // Группу удаляем, только если в ней больше ничего нет
         DB::table('action_groups')
             ->where('name', self::GROUP)
             ->whereNotExists(fn ($q) => $q->from($tables['permissions'])->whereColumn('action_group_id', 'action_groups.id'))

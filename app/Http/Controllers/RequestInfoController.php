@@ -7,14 +7,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
-/**
- * Публичная страница диагностики: показывает посетителю его собственный запрос
- * в том виде, в каком он дошёл до PHP через nginx.
- * Ничего о самом сервере (секреты, версии, внутренние адреса) не выводит.
- */
+// Публичная диагностика: посетитель видит свой запрос так, как он дошёл до PHP через nginx
 class RequestInfoController extends Controller
 {
-    /** Значения этих заголовков скрываем: это сессии и токены. */
     private const HIDDEN_HEADERS = [
         'cookie',
         'authorization',
@@ -23,7 +18,6 @@ class RequestInfoController extends Controller
         'x-xsrf-token',
     ];
 
-    /** Заголовки, которые обычно ставят прокси. Показываем, есть ли они. */
     private const PROXY_HEADERS = [
         'x-forwarded-for' => 'Настоящий IP клиента (по словам прокси)',
         'x-forwarded-proto' => 'Схема, по которой клиент пришёл к прокси',
@@ -33,10 +27,7 @@ class RequestInfoController extends Controller
         'forwarded' => 'Стандартный (RFC 7239) вариант всего вышеперечисленного',
     ];
 
-    /**
-     * Переменные, которые nginx передаёт в PHP сам (fastcgi_params).
-     * Строго по списку: весь $_SERVER выводить нельзя, там значения из .env.
-     */
+    // Строго по списку: в $_SERVER лежат и значения из .env
     private const NGINX_PARAMS = [
         'REMOTE_ADDR' => 'IP того, кто подключился к nginx',
         'REMOTE_PORT' => 'Порт на стороне подключившегося',
@@ -50,7 +41,6 @@ class RequestInfoController extends Controller
         'GATEWAY_INTERFACE' => 'Протокол связи nginx → PHP (FastCGI)',
     ];
 
-    /** Чтобы гигантский заголовок не раздувал страницу. */
     private const MAX_VALUE_LENGTH = 500;
 
     public function __invoke(Request $request): Response

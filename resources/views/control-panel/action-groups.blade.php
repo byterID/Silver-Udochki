@@ -67,7 +67,6 @@
             </table>
         </div>
 
-        {{-- Единая модалка создания / редактирования --}}
         <div x-show="showModal" x-cloak
              class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition.opacity>
             <div class="absolute inset-0 bg-black/50" @click="showModal = false"></div>

@@ -9,7 +9,6 @@ use App\Models\Product;
 use App\Models\Promotion;
 use App\Services\Pricing\PriceCalculator;
 
-/** Каталог лавки и доска акций: всё из БД, цены — через PriceCalculator. */
 class ShopCatalog
 {
     /** @var array{chapters: array<string, array<string, mixed>>, categories: array<string, array<string, mixed>>}|null */
@@ -25,12 +24,8 @@ class ShopCatalog
         return array_key_first($this->catalogData()['chapters']);
     }
 
-    /**
-     * Акции, которые действуют прямо сейчас: сначала те, что скоро закончатся.
-     * ends — метка в мс для таймера в браузере.
-     *
-     * @return list<array{id: int, title: string, note: string|null, color: string, ends: int|null}>
-     */
+    // ends — метка в мс для таймера доски акций
+    /** @return list<array{id: int, title: string, note: string|null, color: string, ends: int|null}> */
     public function activePromos(): array
     {
         return $this->promos ??= Promotion::query()
@@ -50,11 +45,8 @@ class ShopCatalog
             ->all();
     }
 
-    /**
-     * Товар для витрины, карточки и корзины: цена уже со скидкой, old_price — до неё.
-     * stock — точный остаток, low — осталось мало (подписывается красным).
-     *
-     * @return array{id: int, name: string, icon: string, price: int, old_price: int|null, badge: string|null, color: string|null, stock: int, low: bool}
+    // Одна форма товара для карточки, монитора и корзины: price уже со скидкой
+    /** @return array{id: int, name: string, icon: string, price: int, old_price: int|null, badge: string|null, color: string|null, stock: int, low: bool}
      */
     public function presentProduct(Product $product, ?string $fallbackIcon = null): array
     {
@@ -75,8 +67,6 @@ class ShopCatalog
     }
 
     /**
-     * Данные для «монитора»: главы, категории и товары внутри них.
-     *
      * @return array{chapters: array<string, array<string, mixed>>, categories: array<string, array<string, mixed>>}
      */
     public function catalogData(): array

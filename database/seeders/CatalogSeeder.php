@@ -7,10 +7,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Полностью перезаписывает каталог данными из database/data/catalog.php.
- * На PostgreSQL сбрасывает счётчики id, поэтому id товаров всегда одинаковые.
- */
+// Перезаписывает каталог целиком. На PostgreSQL сбрасывает счётчики, так что id товаров стабильны
 class CatalogSeeder extends Seeder
 {
     public const INITIAL_STOCK = 100;

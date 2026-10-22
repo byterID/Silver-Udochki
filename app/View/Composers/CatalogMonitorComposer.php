@@ -7,7 +7,6 @@ namespace App\View\Composers;
 use App\Services\ShopCatalog;
 use Illuminate\View\View;
 
-/** Данные для монитора-каталога, который есть на каждой странице. */
 class CatalogMonitorComposer
 {
     public function __construct(private readonly ShopCatalog $shop) {}

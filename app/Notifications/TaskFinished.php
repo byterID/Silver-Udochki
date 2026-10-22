@@ -10,9 +10,7 @@ use Illuminate\Notifications\Notification;
 
 final class TaskFinished extends Notification
 {
-    public function __construct(
-        private readonly Task $task,
-    ) {}
+    public function __construct(private readonly Task $task) {}
 
     /** @return list<string> */
     public function via(object $notifiable): array

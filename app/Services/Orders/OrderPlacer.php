@@ -21,13 +21,8 @@ use App\Services\Wallet\WalletKeeper;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Оформление заказа. Строки заказа, списание остатков, оплата кошельком
- * и расход промокода — одна транзакция: проходит всё или ничего.
- *
- * Блокировки всегда берутся в одном порядке, поэтому параллельные заказы
- * не ловят взаимную блокировку: кошелёк покупателя → товары по возрастанию id → промокод.
- */
+// Всё в одной транзакции. Блокировки строго в порядке кошелёк → товары по id → промокод,
+// иначе параллельные заказы и возвраты ловят взаимную блокировку
 class OrderPlacer
 {
     public function __construct(
@@ -39,7 +34,7 @@ class OrderPlacer
     /**
      * @param  array<int, int>  $quantities  product_id => количество
      * @param  int  $expectedTotal  сумма к оплате, которую видел покупатель
-     * @param  string  $key  ключ идемпотентности: повтор с ним вернёт уже оформленный заказ
+     * @param  string  $key  повтор с тем же ключом вернёт уже оформленный заказ
      *
      * @throws CheckoutException
      */
@@ -51,13 +46,13 @@ class OrderPlacer
         }
         ksort($quantities);
 
-        // Кошелёк открываем заранее: открытие начисляет подарок своей транзакцией
+        // До транзакции: открытие кошелька начисляет подарок своей транзакцией
         $wallet = $this->wallets->walletOf($user);
 
         try {
             return DB::transaction(fn (): Order => $this->placeLocked($user, $wallet, $quantities, $code, $expectedTotal, $key));
         } catch (UniqueConstraintViolationException $e) {
-            // Запасной путь: заказ с тем же ключом уже записан параллельным запросом
+            // Параллельный запрос с тем же ключом успел первым
             return $this->placed($user, $key) ?? throw $e;
         } catch (WalletException|StockException $e) {
             throw new CheckoutException($e->getMessage(), previous: $e);
@@ -67,8 +62,7 @@ class OrderPlacer
     /** @param array<int, int> $quantities */
     private function placeLocked(User $user, Wallet $wallet, array $quantities, ?string $code, int $expectedTotal, string $key): Order
     {
-        // Заказы одного покупателя идут строго по очереди: повтор с тем же ключом
-        // дождётся первой попытки и вернёт её заказ, а не оформит второй
+        // Заказы покупателя идут по очереди: повтор с тем же ключом дождётся первой попытки
         Wallet::query()->lockForUpdate()->findOrFail($wallet->id);
 
         if (($done = $this->placed($user, $key)) !== null) {
@@ -113,7 +107,6 @@ class OrderPlacer
             $this->stock->sell($line->product, $line->quantity, $order, $user);
         }
 
-        // Промокод и бесплатная доставка могут покрыть всё: тогда списывать нечего
         if ($order->total > 0) {
             $this->wallets->debit($user, $order->total, WalletReason::Purchase, 'order:'.$order->id, 'Заказ '.$order->number());
         }
@@ -125,7 +118,6 @@ class OrderPlacer
         return $order;
     }
 
-    /** Покупатель платит ровно ту сумму и за те товары, что видел в корзине. */
     private function ensureUnchanged(CartQuote $quote, ?string $code, int $expectedTotal): void
     {
         if ($quote->missing !== [] || $quote->limited !== []) {

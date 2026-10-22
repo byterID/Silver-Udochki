@@ -16,13 +16,12 @@ final class NotificationController extends Controller
     {
         $user = $request->user();
 
-        $items = $user->notifications()          // только свои: защита от IDOR
+        $items = $user->notifications()
             ->latest()
             ->limit(10)
             ->get()
             ->map(fn (DatabaseNotification $n): array => [
                 'id' => $n->id,
-                // ISO 8601: формат, который JS гарантированно разбирает в new Date()
                 'read_at' => $n->read_at?->toIso8601String(),
                 'created_at' => $n->created_at->toIso8601String(),
                 'message' => $this->message($n->data),
@@ -31,9 +30,8 @@ final class NotificationController extends Controller
 
         return response()->json([
             'unread' => $user->unreadNotifications()->count(),
-            // Есть ли задачи, по которым пользователь ещё не получил уведомление.
-            // Ограничение по времени — страховка: если нотификатор когда-то потерял
-            // задачу, колокольчик не будет вечно опрашивать каждые 5 секунд.
+            // Колокольчик опрашивает чаще, пока есть задачи без уведомления. Окно в час —
+            // чтобы потерянная нотификатором задача не держала частый опрос вечно
             'pending_tasks' => $user->tasks()
                 ->whereNull('notified_at')
                 ->where('created_at', '>', now()->subHour())
@@ -76,7 +74,6 @@ final class NotificationController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** «Очистить»: удаляет прочитанные, непрочитанные остаются. */
     public function clearRead(Request $request): JsonResponse
     {
         $request->user()->readNotifications()->delete();

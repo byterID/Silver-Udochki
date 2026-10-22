@@ -9,12 +9,8 @@ use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/**
- * Заказ для окна «Мои заказы» и ответов на оформление и возврат.
- * Заказ загружается через Order::withReturns().
- *
- * @mixin Order
- */
+// Заказ должен быть загружен через Order::withReturns()
+/** @mixin Order */
 final class OrderResource extends JsonResource
 {
     /** @return array<string, mixed> */

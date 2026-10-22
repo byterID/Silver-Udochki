@@ -1,4 +1,4 @@
-# ---------- Этап 1: сборка фронтенда ----------
+# Этап 1: сборка фронтенда
 FROM node:22-alpine AS frontend
 
 WORKDIR /app
@@ -11,9 +11,7 @@ COPY resources ./resources
 RUN npm run build
 
 
-# ---------- Этап 2: база с PHP и расширениями ----------
-# Общий фундамент для сборки зависимостей и для рантайма:
-# одна и та же версия PHP и один набор расширений в обоих случаях.
+# Этап 2: база с PHP и расширениями
 FROM php:8.4-fpm-alpine AS base
 
 RUN apk add --no-cache postgresql-libs icu-libs librdkafka \
@@ -27,16 +25,14 @@ RUN apk add --no-cache postgresql-libs icu-libs librdkafka \
 WORKDIR /var/www
 
 
-# ---------- Этап 3: зависимости PHP ----------
+# Этап 3: зависимости PHP
 FROM base AS vendor
 
-# unzip и git нужны composer'у для распаковки пакетов
 RUN apk add --no-cache unzip git
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Сначала только манифесты — слой закешируется и не будет
-# пересобираться при каждой правке кода
+# Сначала только манифесты: слой зависимостей не пересобирается при правке кода
 COPY composer.json composer.lock ./
 RUN composer install \
         --no-dev \
@@ -45,12 +41,12 @@ RUN composer install \
         --prefer-dist \
         --no-interaction
 
-# Теперь код — он нужен composer'у, чтобы построить карту классов
+# Код нужен composer'у для карты классов
 COPY . .
 RUN composer dump-autoload --optimize --no-dev --no-scripts --no-interaction
 
 
-# ---------- Этап 4: рантайм ----------
+# Этап 4: рантайм
 FROM base AS runtime
 
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
@@ -66,18 +62,14 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# USER www-data
-
 EXPOSE 9000
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
 
-# ---------- Этап 5: nginx со статикой ----------
+# Этап 5: nginx со статикой
 FROM nginx:stable-alpine AS web
 
-# public/ (включая собранный build/) берём из рантайм-образа
 COPY --from=runtime /var/www/public /var/www/public
 
-# аналог php artisan storage:link: ссылка на загрузки,
-# сами файлы придут через общий том
+# Аналог storage:link: сами файлы приходят через общий том
 RUN ln -sfn ../storage/app/public /var/www/public/storage

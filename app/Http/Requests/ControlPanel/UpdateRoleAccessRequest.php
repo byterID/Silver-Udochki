@@ -10,7 +10,7 @@ class UpdateRoleAccessRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // проверка уровня роли — в контроллере, там доступен объект Role
+        return true; // уровень роли проверяет AccessControlController
     }
 
     public function rules(): array

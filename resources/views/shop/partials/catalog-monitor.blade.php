@@ -16,7 +16,6 @@
                 <div class="pc-screen" x-ref="pcScreen" tabindex="-1">
                     <div x-ref="content" class="pc-screen__content flex h-full flex-col">
 
-                        {{-- Заголовок окна --}}
                         <header class="flex items-center gap-3 bg-[#2f4a3a] px-4 py-2 text-amber-50">
                             <span class="text-lg" aria-hidden="true">🐟</span>
                             <h2 id="pc-title" class="truncate font-semibold tracking-wide">Серебряные удочки · Каталог</h2>
@@ -25,7 +24,6 @@
                                     class="rounded bg-red-800/80 px-2 leading-6 hover:bg-red-700" aria-label="Закрыть каталог">✕</button>
                         </header>
 
-                        {{-- Панель: назад, путь, поиск --}}
                         <div class="flex flex-wrap items-center gap-2 border-b border-amber-900/20 bg-[#eadcb8] px-4 py-2">
                             <button type="button" x-show="category" @click="category = null"
                                     class="rounded-full border border-amber-900/30 px-3 py-1 text-sm hover:bg-amber-100">← Назад</button>
@@ -44,7 +42,6 @@
                             </form>
                         </div>
 
-                        {{-- Главы и содержимое --}}
                         <div class="grid min-h-0 flex-1 grid-rows-[auto_1fr] sm:grid-cols-[14rem_1fr] sm:grid-rows-1">
                             <aside class="flex gap-1 overflow-x-auto border-b border-amber-900/20 bg-[#efe3c4] p-2 sm:flex-col sm:border-b-0 sm:border-r sm:p-3">
                                 <template x-for="(ch, key) in catalog.chapters" :key="key">
@@ -58,7 +55,6 @@
                             </aside>
 
                             <section x-ref="pcMain" class="min-h-0 overflow-y-auto p-4 sm:p-6">
-                                {{-- Категории главы --}}
                                 <template x-if="!currentCategory">
                                     <div>
                                         <h3 class="font-hand text-3xl text-[#2f4a3a]" x-text="catalog.chapters[chapter]?.title"></h3>
@@ -77,7 +73,6 @@
                                     </div>
                                 </template>
 
-                                {{-- Товары категории --}}
                                 <template x-if="currentCategory">
                                     <div>
                                         <h3 class="flex items-center gap-2 font-hand text-3xl text-[#2f4a3a]">
@@ -129,7 +124,6 @@
                             </section>
                         </div>
 
-                        {{-- Статус-бар --}}
                         <footer class="flex items-center gap-4 bg-[#2f4a3a] px-4 py-1.5 text-xs text-amber-100">
                             <span class="shrink-0">
                                 🛒 <span x-text="$store.cart.count"></span> шт. ·

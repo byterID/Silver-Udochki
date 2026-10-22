@@ -12,9 +12,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Возврат по заказу. Создаёт только OrderRefunder: товары уже на складе,
- * $amount уже на кошельке покупателя.
- *
  * @property int $id
  * @property int $order_id
  * @property int|null $user_id

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/** Виды уток в мини-игре: чем быстрее и мельче, тем дороже. */
 enum DuckKind: string
 {
     case Mallard = 'mallard';
@@ -29,7 +28,7 @@ enum DuckKind: string
         };
     }
 
-    /** Скорость полёта, условных единиц поля в секунду. */
+    // Единиц поля в секунду
     public function speed(): int
     {
         return match ($this) {
@@ -39,7 +38,6 @@ enum DuckKind: string
         };
     }
 
-    /** Радиус попадания вокруг центра утки. */
     public function radius(): int
     {
         return match ($this) {
@@ -49,7 +47,7 @@ enum DuckKind: string
         };
     }
 
-    /** Как часто встречается: относительный вес при выборе. */
+    // Относительная частота в раскладке
     public function weight(): int
     {
         return match ($this) {

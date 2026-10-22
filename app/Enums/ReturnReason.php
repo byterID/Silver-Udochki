@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/** Причина возврата из формы «Оформить возврат». */
 enum ReturnReason: string
 {
     case NotSuitable = 'not_suitable';
@@ -26,13 +25,12 @@ enum ReturnReason: string
         };
     }
 
-    /** Для «Другое» покупатель обязан описать причину сам. */
     public function needsComment(): bool
     {
         return $this === self::Other;
     }
 
-    /** @return list<array{value: string, label: string}> для выпадающего списка формы */
+    /** @return list<array{value: string, label: string}> */
     public static function options(): array
     {
         return array_map(fn (self $reason) => ['value' => $reason->value, 'label' => $reason->label()], self::cases());

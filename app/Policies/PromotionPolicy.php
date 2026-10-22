@@ -8,7 +8,7 @@ use App\Enums\PermissionCode;
 use App\Models\Promotion;
 use App\Models\User;
 
-/** Только права, без проверки роли: что выдано роли в «Управлении доступом», то и работает. */
+// Только права, без проверки роли: решает то, что выдано в «Управлении доступом»
 class PromotionPolicy
 {
     public function viewAny(User $actor): bool
@@ -31,7 +31,6 @@ class PromotionPolicy
         return $actor->can(PermissionCode::DeletePromotions->value);
     }
 
-    /** Поиск товаров нужен в форме и при создании, и при изменении. */
     public function pickProducts(User $actor): bool
     {
         return $actor->canAny([

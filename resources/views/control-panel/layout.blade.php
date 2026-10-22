@@ -4,7 +4,6 @@
         <aside class="w-60 shrink-0 border-r border-gray-200 bg-white p-5">
             <h3 class="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Разделы</h3>
             <nav class="flex flex-col gap-1">
-                {{-- Выпадающее меню "Пользователи" --}}
                 <div x-data="{ open: {{ request()->routeIs('control-panel.staff', 'control-panel.customers', 'control-panel.permissions', 'control-panel.access-control', 'control-panel.action-groups') ? 'true' : 'false' }} }">
                     <button type="button" @click="open = !open"
                             class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100">

@@ -1,4 +1,3 @@
-/** Михалыч моргает через случайные промежутки, иногда дважды подряд. */
 export default function registerSeller(Alpine) {
     Alpine.data('seller', () => ({
         blink: false,

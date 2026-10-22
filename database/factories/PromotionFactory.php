@@ -6,11 +6,7 @@ use App\Enums\PromotionType;
 use App\Models\Promotion;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * По умолчанию: процентная скидка без срока. Товары привязываются через hasAttached().
- *
- * @extends Factory<Promotion>
- */
+/** @extends Factory<Promotion> */
 class PromotionFactory extends Factory
 {
     /**

@@ -9,9 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+// Цена, скидка и название товара на момент покупки
 /**
- * Строка заказа: цена, скидка и название товара на момент покупки.
- *
  * @property int $id
  * @property int $order_id
  * @property int|null $product_id
@@ -48,11 +47,8 @@ class OrderItem extends Model
         return $this->belongsTo(Order::class);
     }
 
-    /**
-     * Товар может быть уже удалён из каталога: тогда остаются sku и name.
-     *
-     * @return BelongsTo<Product, $this>
-     */
+    // Товара может уже не быть в каталоге: остаются sku и name
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
@@ -70,7 +66,6 @@ class OrderItem extends Model
         return $this->hasMany(OrderReturnItem::class);
     }
 
-    /** Цена одной штуки со скидкой по акции. */
     public function unitTotal(): int
     {
         return $this->unit_price - $this->unit_discount;
@@ -81,7 +76,6 @@ class OrderItem extends Model
         return $this->unitTotal() * $this->quantity;
     }
 
-    /** Сколько штук уже вернули. Нужен Order::withReturns(). */
     public function returnedQuantity(): int
     {
         return (int) $this->returned_quantity;

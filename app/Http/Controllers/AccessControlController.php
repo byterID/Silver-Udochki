@@ -64,7 +64,7 @@ class AccessControlController extends Controller
         $warnings = [];
 
         if ($role->name === $superRole) {
-            // Защита «в минус»: критичные права нельзя снять с админа.
+            // Критичные права с суперроли не снимаются
             $missing = $locked->diff($selected);
 
             if ($missing->isNotEmpty()) {
@@ -73,7 +73,7 @@ class AccessControlController extends Controller
                     .'») нельзя снять с роли «'.$role->name.'» — они сохранены.';
             }
         } else {
-            // Защита «в плюс»: эксклюзивные права нельзя выдать никому другому.
+            // Эксклюзивные права есть только у суперроли
             $forbidden = $selected->intersect($exclusive);
 
             if ($forbidden->isNotEmpty()) {
@@ -83,7 +83,6 @@ class AccessControlController extends Controller
             }
         }
 
-        // Нельзя выдать право, которого нет у тебя самого.
         if (! $actor->isSuperAdmin()) {
             $own = $actor->getAllPermissions()->pluck('name');
             $escalation = $selected->diff($own);

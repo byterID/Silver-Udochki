@@ -10,7 +10,6 @@ const LOGIN_URL = '/login';
 
 const isImage = (icon) => /^(\/|https?:)/.test(icon ?? '');
 
-/** Анимация: иконка товара летит по дуге в корзину. */
 function flyToBasket(sourceEl, icon) {
     const target = document.getElementById('basket-drop');
     if (!sourceEl || !target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -46,18 +45,15 @@ function flyToBasket(sourceEl, icon) {
     ], { duration: 700, easing: 'cubic-bezier(.45,0,.55,1)' }).onfinish = () => el.remove();
 }
 
-/**
- * Корзина хранится в localStorage, но цены в ней — только кеш для мгновенной отрисовки.
- * После каждого изменения сервер пересчитывает её (POST /cart/quote) и присылает
- * актуальные цены, скидки, промокод и порог бесплатной доставки.
- */
+// Цены в localStorage — только кеш для мгновенной отрисовки: после каждого изменения
+// сервер пересчитывает корзину (POST /cart/quote), и его ответ главнее
 export default function registerCart(Alpine) {
     Alpine.store('cart', {
-        items: [], // { id, name, price, old_price, badge, icon, qty, stock }; price — уже со скидкой
-        bump: 0,   // счётчик для анимации «покачивания»
+        items: [], // price — уже со скидкой
+        bump: 0,
 
-        quote: null,   // последний ответ сервера: code, delivery
-        version: 0,    // растёт при каждом изменении: устаревшие ответы отбрасываем
+        quote: null,
+        version: 0, // ответы на устаревшие версии корзины отбрасываем
         timer: null,
         syncing: false,
         notice: '',
@@ -66,16 +62,15 @@ export default function registerCart(Alpine) {
         codeError: '',
         codeBusy: false,
 
-        deliveryFee: 0,      // тариф доставки; страница подставляет его сразу, сервер присылает с расчётом
-        checkoutKey: null,   // один на попытку: повтор после обрыва сети не оформит второй заказ
+        deliveryFee: 0,
+        checkoutKey: null, // один на попытку: повтор после обрыва сети не оформит второй заказ
         checkoutBusy: false,
         checkoutError: '',
-        placed: null,        // только что оформленный заказ: показываем вместо пустой корзины
+        placed: null,
 
         init() {
             this.items = this.read();
             this.refresh(0);
-            // Синхронизация между вкладками
             window.addEventListener('storage', (e) => {
                 if (e.key === STORAGE_KEY) {
                     this.items = this.read();
@@ -97,11 +92,10 @@ export default function registerCart(Alpine) {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
             } catch {
-                // приватный режим или нет места: корзина проживёт до перезагрузки
+                // Приватный режим или нет места: корзина проживёт до перезагрузки
             }
         },
 
-        /** Изменили состав: сохранить и попросить сервер пересчитать. */
         changed() {
             this.version++;
             this.checkoutKey = null;
@@ -111,12 +105,11 @@ export default function registerCart(Alpine) {
             this.refresh();
         },
 
-        /** Сколько этого товара уже лежит в корзине. */
         qtyOf(id) {
             return this.items.find((i) => i.id === id)?.qty ?? 0;
         },
 
-        /** Остаток со страницы — подсказка; окончательно количество урежет сервер. */
+        // Остаток со страницы — подсказка, окончательно количество урежет сервер
         limitOf(item) {
             return Math.min(MAX_QTY, item.stock ?? MAX_QTY);
         },
@@ -145,7 +138,6 @@ export default function registerCart(Alpine) {
             }
             this.changed();
             flyToBasket(sourceEl, product.icon);
-            // Корзина качнётся, когда товар «долетит»
             setTimeout(() => this.bump++, sourceEl ? 650 : 0);
         },
 
@@ -167,8 +159,6 @@ export default function registerCart(Alpine) {
             this.changed();
         },
 
-        /* ---------- Пересчёт на сервере ---------- */
-
         payload() {
             return { items: this.items.map((i) => ({ id: i.id, qty: i.qty })) };
         },
@@ -187,13 +177,12 @@ export default function registerCart(Alpine) {
                 const { ok, data } = await send('POST', QUOTE_URL, this.payload());
                 if (ok && data && version === this.version) this.apply(data);
             } catch {
-                // нет сети: остаёмся на кешированных ценах
+                // Нет сети: остаёмся на кешированных ценах
             } finally {
                 this.syncing = false;
             }
         },
 
-        /** Принять расчёт сервера: обновить цены и остатки, убрать то, чего больше нет. */
         apply(data) {
             const fresh = new Map(data.items.map((i) => [i.id, i]));
             const missing = new Set(data.missing ?? []);
@@ -223,8 +212,6 @@ export default function registerCart(Alpine) {
             if (data.code_error) this.codeError = data.code_error;
         },
 
-        /* ---------- Оформление: оплата кошельком ---------- */
-
         async checkout() {
             if (this.checkoutBusy || this.count === 0) return;
 
@@ -232,7 +219,7 @@ export default function registerCart(Alpine) {
             this.checkoutError = '';
             this.checkoutKey ??= newRequestKey();
             try {
-                // Сумма — та, что видит покупатель: если сервер насчитает другую, заказ не пройдёт
+                // Если сервер насчитает не ту сумму, что видит покупатель, заказ не пройдёт (409)
                 const { ok, status, data } = await send('POST', ORDERS_URL, {
                     ...this.payload(), total: this.toPay, key: this.checkoutKey,
                 });
@@ -255,7 +242,7 @@ export default function registerCart(Alpine) {
                     this.checkoutError = data?.message ?? 'Не удалось оформить заказ. Попробуйте ещё раз.';
                 }
             } catch {
-                // Ключ тот же: если заказ всё-таки прошёл, повтор вернёт его, а не спишет второй раз
+                // Ключ тот же: если заказ всё-таки прошёл, повтор вернёт его, а не спишет дважды
                 this.checkoutError = 'Нет связи с лавкой. Попробуйте ещё раз, дважды не спишем.';
             } finally {
                 this.checkoutBusy = false;
@@ -296,18 +283,15 @@ export default function registerCart(Alpine) {
             }
         },
 
-        /* ---------- Суммы (та же формула, что в CartQuote на сервере) ---------- */
-
+        // Суммы считаются по той же формуле, что CartQuote на сервере
         get count() {
             return this.items.reduce((sum, i) => sum + i.qty, 0);
         },
 
-        /** По ценам без скидок. */
         get subtotal() {
             return this.items.reduce((sum, i) => sum + i.qty * (i.old_price ?? i.price), 0);
         },
 
-        /** После скидок на товары. */
         get goods() {
             return this.items.reduce((sum, i) => sum + i.qty * i.price, 0);
         },
@@ -328,7 +312,7 @@ export default function registerCart(Alpine) {
             return this.goods - this.codeDiscount;
         },
 
-        /** null — акции на доставку сейчас нет. */
+        // null — акции на доставку сейчас нет
         get delivery() {
             const from = this.quote?.delivery?.from;
             if (from == null) return null;
@@ -340,12 +324,11 @@ export default function registerCart(Alpine) {
             return this.count === 0 || this.delivery?.free ? 0 : this.deliveryFee;
         },
 
-        /** К оплате: товары после скидок плюс доставка. */
         get toPay() {
             return this.total + this.deliveryPrice;
         },
 
-        /** Уровень наполнения: от него зависят подсказка и «тяжесть» руки. */
+        // От уровня зависят подсказка и «тяжесть» руки продавца
         get level() {
             const c = this.count;
             if (c === 0) return 'empty';
@@ -354,7 +337,6 @@ export default function registerCart(Alpine) {
             return 'full';
         },
 
-        /** Иконки, которые видны в корзине (не больше 9). */
         get visibleIcons() {
             const out = [];
             for (const item of this.items) {

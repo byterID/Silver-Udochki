@@ -4,10 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/*
- * Раунды мини-игры. plan — полёты уток и правила, выданные при старте:
- * по нему сервер проверяет выстрелы, даже если config/game.php успели поменять.
- */
+// plan — правила и полёты на момент старта: правка config/game.php не влияет на начатые раунды
 return new class extends Migration
 {
     public function up(): void
@@ -25,7 +22,6 @@ return new class extends Migration
             $table->timestamp('finished_at')->nullable();
             $table->timestamps();
 
-            // Сумма наград за сутки и поиск незаконченного раунда
             $table->index(['user_id', 'status', 'finished_at']);
         });
     }

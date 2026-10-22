@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Операция по кошельку. Записи только добавляются, не меняются.
- *
  * @property int $id
  * @property int $wallet_id
  * @property int $amount

@@ -7,19 +7,15 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600|neucha:400&display=swap" rel="stylesheet" />
 
-        <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
-            {{-- Шапка для всех: гостю «Войти/Зарегистрироваться», пользователю — аватар и меню --}}
             @include('layouts.navigation')
 
-            <!-- Page Heading -->
             @isset($header)
                 <header class="bg-white shadow">
                     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -28,13 +24,11 @@
                 </header>
             @endisset
 
-            <!-- Page Content -->
             <main>
                 {{ $slot }}
             </main>
         </div>
 
-        {{-- Монитор-каталог: открывается табличкой в лавке и кнопкой «Каталог» в шапке --}}
         @include('shop.partials.catalog-monitor')
 
         {{-- Корзина в руке. В панели управления не нужна --}}
@@ -42,7 +36,6 @@
             <x-basket />
         @endunless
 
-        {{-- «Мои заказы»: открывается из меню под ником и из корзины --}}
         @auth
             <x-orders-window />
         @endauth

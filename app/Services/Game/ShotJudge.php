@@ -6,11 +6,9 @@ namespace App\Services\Game;
 
 use App\Models\GameRound;
 
+// От браузера берём только время и координаты выстрелов, попадания считаем сами.
+// position() и выбор цели повторены в duck-game.js
 /**
- * Переигрывает раунд по выстрелам из браузера: где была каждая утка в момент
- * выстрела и попала ли в неё дробь. Браузеру верим только в том, куда и когда
- * он стрелял, а не в то, что он насчитал. Та же формула есть в duck-game.js.
- *
  * @phpstan-import-type Plan from GameRound
  * @phpstan-import-type Duck from GameRound
  *
@@ -20,7 +18,7 @@ class ShotJudge
 {
     /**
      * @param  Plan  $plan
-     * @param  list<Shot>  $shots  в порядке выстрелов
+     * @param  list<Shot>  $shots
      * @return array{hits: list<int>, score: int}
      *
      * @throws ShotsRejected
@@ -36,7 +34,7 @@ class ShotJudge
             $target = null;
             $nearest = INF;
 
-            // Один выстрел — одна утка: ближайшая к прицелу из тех, что ещё летят
+            // Один выстрел — одна утка: ближайшая к прицелу из ещё не подбитых
             foreach ($plan['ducks'] as $duck) {
                 if (isset($hit[$duck['id']])) {
                     continue;
@@ -63,9 +61,8 @@ class ShotJudge
         return ['hits' => array_keys($hit), 'score' => $score];
     }
 
+    // null — ещё не взлетела или уже улетела
     /**
-     * Где утка в момент $t (мс от начала раунда). null — ещё не взлетела или уже улетела.
-     *
      * @param  list<array{0: int, 1: int, 2: int}>  $path
      * @return array{0: float, 1: float}|null
      */
@@ -91,9 +88,6 @@ class ShotJudge
     }
 
     /**
-     * Так ли могла стрелять двустволка: по порядку, не чаще min_interval_ms,
-     * не больше magazine выстрелов без паузы на перезарядку, и только по полю.
-     *
      * @param  Plan  $plan
      * @param  list<Shot>  $shots
      *
@@ -121,7 +115,6 @@ class ShotJudge
                 if ($gap < $plan['min_interval_ms']) {
                     throw new ShotsRejected('Так часто двустволка не стреляет.');
                 }
-                // За такую паузу ружьё можно было перезарядить
                 if ($gap >= $plan['reload_ms']) {
                     $shells = $plan['magazine'];
                 }

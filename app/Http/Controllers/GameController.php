@@ -17,7 +17,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** Мини-игра «Утиная зорька»: страница, старт раунда и итог по выстрелам. */
 class GameController extends Controller
 {
     public const RECENT = 5;
@@ -59,7 +58,6 @@ class GameController extends Controller
         ]);
     }
 
-    /** 201 — раунд начат, в ответе полёты уток и правила. */
     public function store(Request $request): JsonResponse
     {
         /** @var User $user */
@@ -73,10 +71,7 @@ class GameController extends Controller
         ], 201);
     }
 
-    /**
-     * 200 — итог подведён (и при повторе тот же).
-     * 425 — утки ещё летят; 409, 410, 422 — раунд закрыт без награды.
-     */
+    // Повтор возвращает тот же итог. 425 — утки ещё летят, итог можно прислать позже
     public function finish(FinishGameRoundRequest $request, GameRound $round, WalletKeeper $wallets): JsonResponse
     {
         /** @var User $user */

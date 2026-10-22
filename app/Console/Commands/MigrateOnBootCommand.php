@@ -7,15 +7,9 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Миграции при старте контейнера (RUN_MIGRATIONS=true в docker/entrypoint.sh).
- *
- * `migrate --isolated` держит блокировку в кеше, чтобы два контейнера не мигрировали разом.
- * При CACHE_STORE=database блокировка живёт в таблице cache_locks, которой на пустой базе
- * ещё нет, и голый `migrate --isolated` падает. Поэтому сначала создаём таблицы кеша.
- * Если два контейнера впервые стартуют одновременно, второй может упасть на этом шаге:
- * restart: unless-stopped поднимет его, и он уже найдёт таблицы на месте.
- */
+// migrate --isolated берёт блокировку в кеше, а при CACHE_STORE=database таблицы cache_locks
+// на пустой базе ещё нет, и он падает. Поэтому сначала создаём таблицы кеша.
+// Второй одновременно стартующий контейнер может упасть здесь: restart его поднимет
 class MigrateOnBootCommand extends Command
 {
     public const CACHE_MIGRATION = 'database/migrations/0001_01_01_000001_create_cache_table.php';

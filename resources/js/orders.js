@@ -1,10 +1,6 @@
 import { send, newRequestKey } from './http';
 
-/**
- * Окно «Мои заказы». Открывается событием orders-open (из меню под ником
- * и из корзины после оформления), при каждом открытии заказы грузятся заново.
- * Поверх него — форма «Оформить возврат» по выбранному заказу.
- */
+// Открывается событием orders-open (меню под ником, корзина после оформления)
 export function ordersWindow(url, reasons) {
     return {
         open: false,
@@ -28,7 +24,7 @@ export function ordersWindow(url, reasons) {
             this.load();
         },
 
-        /** Escape и клик мимо закрывают сначала форму возврата, потом окно. */
+        // Escape и клик мимо закрывают сначала форму возврата, потом окно
         close() {
             if (this.returning) {
                 this.cancelReturn();
@@ -61,14 +57,11 @@ export function ordersWindow(url, reasons) {
             this.expanded = this.expanded === id ? null : id;
         },
 
-        /* ---------- Возврат ---------- */
-
         startReturn(order) {
             this.returning = order;
             this.returnError = '';
             this.notice = '';
             this.form = {
-                // По умолчанию отмечено всё, что ещё не вернули
                 lines: order.items
                     .filter((item) => item.qty > item.returned)
                     .map((item) => ({
@@ -105,11 +98,7 @@ export function ordersWindow(url, reasons) {
                 && (!this.needsComment || this.form.comment.trim() !== '');
         },
 
-        /**
-         * Сколько вернётся на баланс — та же формула, что в OrderRefunder::amountFor():
-         * оплаченное за товары делится по стоимости строк нарастающим итогом,
-         * доставка возвращается вместе с последним товаром.
-         */
+        // Та же формула, что в OrderRefunder::amountFor()
         get refundPreview() {
             const order = this.returning;
             if (!order) return { amount: 0, full: false };

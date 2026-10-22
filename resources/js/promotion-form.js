@@ -5,7 +5,6 @@ const PRESETS = ['#fde68a', '#f8fafc', '#fca5a5', '#f9a8d4', '#c4b5fd', '#93c5fd
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // без 0/O и 1/I
 
-/** Форма акции в панели управления: поиск и выбор товаров, цвет, превью доски. */
 export default function registerPromotionForm(Alpine) {
     Alpine.data('promotionForm', (cfg) => ({
         type: cfg.type,
@@ -37,8 +36,6 @@ export default function registerPromotionForm(Alpine) {
             clearInterval(this.ticker);
             this.controller?.abort();
         },
-
-        /* ---------- Товары ---------- */
 
         isSelected(id) {
             return this.selected.some((p) => p.id === id);
@@ -109,14 +106,10 @@ export default function registerPromotionForm(Alpine) {
             return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
         },
 
-        /* ---------- Промокод ---------- */
-
         generateCode() {
             const bytes = crypto.getRandomValues(new Uint8Array(8));
             this.code = Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
         },
-
-        /* ---------- Превью доски ---------- */
 
         get endsMs() {
             return this.endsAt ? new Date(this.endsAt).getTime() : null;

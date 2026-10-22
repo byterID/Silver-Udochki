@@ -4,10 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 
-/*
- * Права на склад. Как и права на акции, заводятся миграцией: деплой не запускает сидеры.
- * Выдаём admin и manager, если роли уже есть. Коды строками, без зависимости от enum.
- */
+// Деплой не запускает сидеры, поэтому права заводит миграция. Коды строками: миграция
+// не должна зависеть от enum. Роли admin и manager получают права, если уже существуют
 return new class extends Migration
 {
     private const GROUP = 'Склад';

@@ -9,9 +9,7 @@ class ActionGroup extends Model
 {
     protected $fillable = ['name'];
 
-    /**
-     * @return HasMany<Permission, $this>
-     */
+    /** @return HasMany<Permission, $this> */
     public function permissions(): HasMany
     {
         return $this->hasMany(Permission::class);

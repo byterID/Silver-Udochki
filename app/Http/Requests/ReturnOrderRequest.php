@@ -8,10 +8,6 @@ use App\Enums\ReturnReason;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/**
- * Форма «Оформить возврат»: какие строки заказа и сколько штук, причина,
- * комментарий и ключ попытки. Сумму к возврату считает сервер.
- */
 class ReturnOrderRequest extends FormRequest
 {
     public const MAX_ITEMS = 100;

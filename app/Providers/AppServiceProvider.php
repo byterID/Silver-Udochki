@@ -21,15 +21,13 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Один экземпляр на запрос: акции и каталог загружаются один раз,
-        // а контроллер и композер монитора видят одни и те же данные
+        // Один экземпляр на запрос: контроллер и композер монитора делят загруженные акции
         $this->app->scoped(PriceCalculator::class);
         $this->app->scoped(ShopCatalog::class);
     }
 
     public function boot(): void
     {
-        // Единые требования к паролям во всём приложении
         Password::defaults(function () {
             $rule = Password::min(12)->letters()->numbers();
 
@@ -38,29 +36,25 @@ class AppServiceProvider extends ServiceProvider
                 : $rule;
         });
 
-        // В разработке ловим N+1 и обращения к незаполненным атрибутам
         Model::shouldBeStrict(! $this->app->isProduction());
 
-        // Корзина пересчитывается при каждом изменении, а вот подбирать промокоды перебором нельзя
+        // Корзина пересчитывается на каждый клик, а промокоды нельзя подбирать перебором
         RateLimiter::for('cart', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));
         RateLimiter::for('promo-code', fn (Request $request) => [
             Limit::perMinute(10)->by('minute:'.$request->ip()),
             Limit::perHour(60)->by('hour:'.$request->ip()),
         ]);
-        // Оформление: повторы с тем же ключом безопасны, но долбить сервер незачем
         RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
-        // Раунд идёт минуту, так что честному игроку хватит с запасом; чаще — это перебор раскладок
+        // Раунд идёт минуту: чаще стартует только тот, кто перебирает раскладки
         RateLimiter::for('game-start', fn (Request $request) => [
             Limit::perMinute(6)->by('minute:'.$request->user()?->getAuthIdentifier()),
             Limit::perHour(90)->by('hour:'.$request->user()?->getAuthIdentifier()),
         ]);
         RateLimiter::for('order-return', fn (Request $request) => Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
-        // Монитор-каталог есть на каждой странице (открывается и из шапки)
         View::composer('shop.partials.catalog-monitor', CatalogMonitorComposer::class);
         View::composer('layouts.navigation', WalletComposer::class);
 
-        // За прокси генерируем только https-ссылки
         if ($this->app->isProduction()) {
             URL::forceScheme('https');
         }

@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-/**
- * Оформление: та же корзина, что и для пересчёта, плюс сумма, которую видел
- * покупатель, и ключ попытки. Цены по-прежнему считает сервер.
- */
 class PlaceOrderRequest extends CartQuoteRequest
 {
     public function rules(): array

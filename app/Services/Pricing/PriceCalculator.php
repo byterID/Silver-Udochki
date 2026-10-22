@@ -9,21 +9,18 @@ use App\Models\Product;
 use App\Models\Promotion;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Единственное место, где считаются цены со скидками. Браузеру не доверяем:
- * корзина присылает только id и количество, цены всегда отсюда.
- * Живёт один запрос (scoped), действующие акции загружаются один раз.
- */
+// Единственное место расчёта цен со скидками. Scoped: акции грузятся раз за запрос
 class PriceCalculator
 {
     public const MAX_QTY = 999;
 
-    /** @var array<int, Promotion>|null product_id => акция со скидкой */
+    /** @var array<int, Promotion>|null product_id => акция */
     private ?array $percentByProduct = null;
 
+    // false — уже искали и не нашли
     private Promotion|false|null $freeDelivery = null;
 
-    /** Скидка округляется вниз до рубля, итоговая цена не меньше 1 ₽. */
+    // Скидка округляется вниз (в пользу лавки), цена не меньше 1 ₽
     public static function applyPercent(int $price, int $percent): int
     {
         if ($price <= 0 || $percent <= 0) {
@@ -48,9 +45,7 @@ class PriceCalculator
         );
     }
 
-    /**
-     * @param  array<int, int>  $quantities  product_id => количество
-     */
+    /** @param  array<int, int>  $quantities  product_id => количество */
     public function quote(array $quantities, ?string $code = null): CartQuote
     {
         $quantities = array_filter($quantities, fn (int $qty) => $qty > 0);
@@ -65,13 +60,11 @@ class PriceCalculator
         foreach ($quantities as $id => $qty) {
             $product = $products->get($id);
 
-            // Снят с продажи или закончился на складе: из корзины убираем
             if ($product === null || $product->stock < 1) {
                 $missing[] = $id;
 
                 continue;
             }
-            // Больше, чем есть на складе: оставляем, сколько есть
             $available = min($product->stock, self::MAX_QTY);
             if ($qty > $available) {
                 $limited[] = $id;
@@ -95,11 +88,7 @@ class PriceCalculator
         );
     }
 
-    /**
-     * Ищет промокод и объясняет, почему он не подходит.
-     *
-     * @return array{0: Promotion|null, 1: string|null}
-     */
+    /** @return array{0: Promotion|null, 1: string|null} */
     public function checkCode(string $code): array
     {
         $promotion = Promotion::query()
@@ -119,7 +108,7 @@ class PriceCalculator
         return $error === null ? [$promotion, null] : [null, $error];
     }
 
-    /** Действующая акция с самым низким порогом бесплатной доставки. */
+    // Из нескольких акций действует самый низкий порог
     public function freeDelivery(): ?Promotion
     {
         if ($this->freeDelivery === null) {

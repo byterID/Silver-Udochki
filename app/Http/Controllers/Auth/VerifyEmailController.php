@@ -10,9 +10,6 @@ use Illuminate\Http\RedirectResponse;
 
 class VerifyEmailController extends Controller
 {
-    /**
-     * Mark the authenticated user's email address as verified.
-     */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
         /** @var User $user */
@@ -23,7 +20,7 @@ class VerifyEmailController extends Controller
         }
 
         if ($user->markEmailAsVerified()) {
-            // Подтверждение email отключено (см. User.php). Убрать, когда User снова будет implements MustVerifyEmail.
+            // User не implements MustVerifyEmail: подтверждение почты пока выключено
             event(new Verified($user)); // @phpstan-ignore argument.type
         }
 

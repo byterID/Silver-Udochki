@@ -6,7 +6,6 @@ namespace App\Services\Pricing;
 
 use App\Models\Promotion;
 
-/** Цена товара сейчас: базовая, итоговая и акция, которая её снизила. */
 final readonly class ProductPrice
 {
     public function __construct(

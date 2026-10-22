@@ -11,15 +11,10 @@ use App\Models\User;
 use App\Services\Wallet\WalletKeeper;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Раунды мини-игры: выдаёт полёты, принимает выстрелы и начисляет награду.
- * Деньги считаются только здесь, по раскладке раунда и суточному лимиту.
- *
- * @phpstan-import-type Shot from ShotJudge
- */
+/** @phpstan-import-type Shot from ShotJudge */
 class GameMaster
 {
-    /** Запас на задержку сети: итог может прийти чуть раньше расчётного конца раунда. */
+    // Часы браузера могут спешить: итог принимаем чуть раньше расчётного конца
     public const EARLY_MS = 2000;
 
     public function __construct(
@@ -28,11 +23,10 @@ class GameMaster
         private readonly WalletKeeper $wallets,
     ) {}
 
-    /** Новый раунд. Незаконченный прежний сгорает: два раунда сразу не сыграть. */
     public function start(User $user): GameRound
     {
         return DB::transaction(function () use ($user): GameRound {
-            // Блокировка пользователя: две вкладки не откроют два раунда одновременно
+            // Блокировка пользователя: две вкладки не откроют два раунда разом
             User::query()->lockForUpdate()->findOrFail($user->id);
 
             $user->gameRounds()
@@ -48,16 +42,14 @@ class GameMaster
     }
 
     /**
-     * Итог раунда. Повторный вызов возвращает уже подведённый итог.
-     *
      * @param  list<Shot>  $shots
      *
-     * @throws RoundStillRunning утки ещё летят
+     * @throws RoundStillRunning
      */
     public function finish(GameRound $round, array $shots): GameRound
     {
         return DB::transaction(function () use ($round, $shots): GameRound {
-            // Сначала пользователь, потом раунд — в том же порядке, что и в start()
+            // Порядок блокировок как в start(): пользователь, потом раунд
             $user = User::query()->lockForUpdate()->findOrFail($round->user_id);
             $round = GameRound::query()->lockForUpdate()->findOrFail($round->id);
 
@@ -93,7 +85,6 @@ class GameMaster
         });
     }
 
-    /** Сколько ещё можно заработать за скользящие 24 часа. */
     public function dailyLeft(User $user): int
     {
         $earned = (int) $user->gameRounds()

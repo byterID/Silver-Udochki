@@ -14,7 +14,6 @@
             $isDelete = old('_form') === 'delete';
         @endphp
 
-        {{-- Форма изменения --}}
         <form :action="'{{ route('control-panel.users.update', ['user' => '__ID__']) }}'.replace('__ID__', editUser.id)"
               method="POST" class="flex flex-col gap-4">
             @csrf
@@ -61,7 +60,6 @@
             </div>
         </form>
 
-        {{-- Блок удаления --}}
         <div class="mt-6 border-t border-gray-200 pt-5">
             <template x-if="!confirmingDelete">
                 <button type="button" @click="confirmingDelete = true"

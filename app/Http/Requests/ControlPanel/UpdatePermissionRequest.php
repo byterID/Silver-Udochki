@@ -14,10 +14,7 @@ class UpdatePermissionRequest extends FormRequest
         return $this->user()?->can(PermissionCode::ManageAccess->value) ?? false;
     }
 
-    /**
-     * Внимание: поля `name` тут НЕТ намеренно.
-     * Код права — часть кода приложения, а не редактируемые данные.
-     */
+    // name не редактируется: код права зашит в PermissionCode
     public function rules(): array
     {
         return [

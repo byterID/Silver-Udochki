@@ -12,8 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Типы — такие, какими поля становятся ПОСЛЕ кастов.
- *
  * @property string $id UUID
  * @property int $user_id
  * @property TaskType $type

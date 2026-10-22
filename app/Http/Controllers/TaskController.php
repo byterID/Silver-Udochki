@@ -57,13 +57,11 @@ final class TaskController extends Controller
 
     public function download(Task $task): StreamedResponse
     {
-        abort_unless($task->status === TaskStatus::Done, 404);              // результата не было и нет
-
-        $disk = Storage::disk('local');
-        abort_if($task->result_path === null, 410, 'Срок хранения файла истёк'); // был, но удалён по сроку
+        abort_unless($task->status === TaskStatus::Done, 404);
+        abort_if($task->result_path === null, 410, 'Срок хранения файла истёк');
 
         $filename = sprintf('%s_%s.csv', $task->type->value, $task->created_at->format('Y-m-d_His'));
 
-        return $disk->download($task->result_path, $filename);
+        return Storage::disk('local')->download($task->result_path, $filename);
     }
 }
