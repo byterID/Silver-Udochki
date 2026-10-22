@@ -15,7 +15,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
-/** Остатки на витрине и в корзине. Панель склада — в ControlPanel\StockManagementTest. */
 class StockTest extends TestCase
 {
     use RefreshDatabase;
@@ -27,7 +26,7 @@ class StockTest extends TestCase
     private function quote(array $items): TestResponse
     {
         return $this->postJson(route('cart.quote'), [
-            'items' => collect($items)->map(fn ($qty, $id) => ['id' => $id, 'qty' => $qty])->values()->all(),
+            'items' => $this->cartItems($items),
         ]);
     }
 

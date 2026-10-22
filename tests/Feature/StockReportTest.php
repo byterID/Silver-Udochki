@@ -26,7 +26,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
-/** Отчёт об остатках: право на запуск и содержимое CSV. Kafka не трогаем, раннер зовём напрямую. */
+// Раннер вызывается напрямую, без воркера и Kafka
 class StockReportTest extends TestCase
 {
     use RefreshDatabase;
@@ -37,14 +37,6 @@ class StockReportTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         Kafka::fake();
         Storage::fake('local');
-    }
-
-    private function userWithRole(RoleName $role): User
-    {
-        $user = User::factory()->create(['email_verified_at' => now()]);
-        $user->syncRoles([$role->value]);
-
-        return $user->fresh();
     }
 
     /** @param array<string, mixed> $payload */

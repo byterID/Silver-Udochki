@@ -9,7 +9,6 @@ use App\Enums\PromotionType;
 use App\Enums\RoleName;
 use App\Models\Product;
 use App\Models\Promotion;
-use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -25,14 +24,6 @@ class PromotionManagementTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
-    }
-
-    private function userWithRole(RoleName $role): User
-    {
-        $user = User::factory()->create(['email_verified_at' => now()]);
-        $user->syncRoles([$role->value]);
-
-        return $user->fresh();
     }
 
     /** @return array<string, mixed> */

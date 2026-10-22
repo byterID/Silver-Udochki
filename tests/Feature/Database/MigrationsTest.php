@@ -9,11 +9,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
-/**
- * Без RefreshDatabase: каждый тест начинает с пустой базы, как свежий контейнер.
- * В CI те же тесты идут на PostgreSQL, где база живёт между тестами, поэтому
- * перед тестом её стираем, а после — оставляем чистой и мигрированной для остальных.
- */
+// Без RefreshDatabase: каждый тест начинает с пустой базы, как свежий контейнер.
+// На PostgreSQL в CI база живёт между тестами, поэтому после теста она снова мигрирована
 class MigrationsTest extends TestCase
 {
     protected function setUp(): void
@@ -29,7 +26,6 @@ class MigrationsTest extends TestCase
         parent::tearDown();
     }
 
-    /** Таблицы, без которых витрина и панель падают с «relation ... does not exist». */
     private const REQUIRED_TABLES = [
         'users', 'cache', 'cache_locks', 'sessions', 'roles', 'permissions', 'action_groups',
         'tasks', 'notifications', 'chapters', 'categories', 'products',

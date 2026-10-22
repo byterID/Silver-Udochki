@@ -16,11 +16,8 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Route as Router;
 use Tests\TestCase;
 
-/**
- * Обходит все GET-страницы приложения гостем и администратором и требует,
- * чтобы ни одна не отвечала 5xx. Новый маршрут попадает сюда сам; если у него
- * параметр, которого нет в params(), тест подскажет, что дописать.
- */
+// Обходит все GET-маршруты гостем и админом: ни один не должен отвечать 5xx.
+// Новый маршрут с параметром потребует дописать значение в params()
 class PagesSmokeTest extends TestCase
 {
     use RefreshDatabase;
@@ -33,8 +30,7 @@ class PagesSmokeTest extends TestCase
 
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        $this->admin = User::factory()->create(['email_verified_at' => now()]);
-        $this->admin->syncRoles([RoleName::Admin->value]);
+        $this->admin = $this->userWithRole(RoleName::Admin);
     }
 
     public function test_страницы_работают_с_каталогом_и_акциями(): void
@@ -53,7 +49,7 @@ class PagesSmokeTest extends TestCase
 
     public function test_страницы_работают_на_пустой_базе(): void
     {
-        // Ни глав, ни товаров, ни акций: так выглядит свежая установка до сидеров
+        // Свежая установка до сидеров
         $this->visitAll(category: Category::factory()->create()->slug);
     }
 

@@ -13,10 +13,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** Виртуальный кошелёк: приветственные деньги, списания, история в шапке. */
 class WalletTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['shop.welcome_balance' => 20_000]);
+    }
 
     private function keeper(): WalletKeeper
     {
@@ -54,7 +59,6 @@ class WalletTest extends TestCase
 
     public function test_кошелёк_без_регистрации_открывается_при_первом_обращении(): void
     {
-        // Например, пользователь создан командой или зарегистрировался во время выкладки
         $user = User::factory()->create();
         $this->assertDatabaseCount('wallets', 0);
 
@@ -66,11 +70,11 @@ class WalletTest extends TestCase
         $user = User::factory()->create();
         $wallet = $this->keeper()->walletOf($user);
 
-        $debit = $this->keeper()->debit($user, 1_500, WalletReason::Welcome, note: 'проверка');
+        $debit = $this->keeper()->debit($user, 1_500, WalletReason::Purchase, note: 'проверка');
         $this->assertSame([-1_500, 18_500], [$debit->amount, $debit->balance_after]);
         $this->assertSame(18_500, $wallet->balance, 'Экземпляр кошелька у вызывающего обновлён');
 
-        $credit = $this->keeper()->credit($user, 500, WalletReason::Welcome);
+        $credit = $this->keeper()->credit($user, 500, WalletReason::Refund);
         $this->assertSame([500, 19_000], [$credit->amount, $credit->balance_after]);
         $this->assertSame(19_000, Wallet::query()->value('balance'));
     }
@@ -81,7 +85,7 @@ class WalletTest extends TestCase
         $this->keeper()->walletOf($user);
 
         try {
-            $this->keeper()->debit($user, 20_001, WalletReason::Welcome);
+            $this->keeper()->debit($user, 20_001, WalletReason::Purchase);
             $this->fail('Ожидалось исключение');
         } catch (WalletException $e) {
             $this->assertStringContainsString('Недостаточно денег', $e->getMessage());
@@ -94,8 +98,8 @@ class WalletTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $first = $this->keeper()->debit($user, 700, WalletReason::Welcome, 'order:1');
-        $again = $this->keeper()->debit($user, 700, WalletReason::Welcome, 'order:1');
+        $first = $this->keeper()->debit($user, 700, WalletReason::Purchase, 'order:1');
+        $again = $this->keeper()->debit($user, 700, WalletReason::Purchase, 'order:1');
 
         $this->assertSame($first->id, $again->id);
         $this->assertSame(19_300, $this->keeper()->walletOf($user)->balance);
@@ -106,14 +110,14 @@ class WalletTest extends TestCase
     {
         $this->expectException(WalletException::class);
 
-        $this->keeper()->credit(User::factory()->create(), 0, WalletReason::Welcome);
+        $this->keeper()->credit(User::factory()->create(), 0, WalletReason::Refund);
     }
 
     public function test_миграция_начисляет_тем_кто_зарегистрировался_раньше(): void
     {
         $old = User::factory()->create();
         $withWallet = User::factory()->create();
-        $this->keeper()->debit($withWallet, 5_000, WalletReason::Welcome);
+        $this->keeper()->debit($withWallet, 5_000, WalletReason::Purchase);
 
         /** @var Migration $migration */
         $migration = require database_path('migrations/2026_10_19_120100_grant_welcome_balance.php');
@@ -128,7 +132,7 @@ class WalletTest extends TestCase
     public function test_шапка_показывает_баланс_и_историю(): void
     {
         $user = User::factory()->create();
-        $this->keeper()->debit($user, 1_234, WalletReason::Welcome, note: 'проверка');
+        $this->keeper()->debit($user, 1_234, WalletReason::Purchase, note: 'проверка');
 
         $this->actingAs($user)
             ->get(route('home'))

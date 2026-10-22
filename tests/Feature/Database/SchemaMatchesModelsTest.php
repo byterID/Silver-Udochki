@@ -17,12 +17,8 @@ use ReflectionMethod;
 use ReflectionNamedType;
 use Tests\TestCase;
 
-/**
- * Каждая модель из app/Models смотрит в существующие таблицы и колонки:
- * fillable, casts и все связи (включая pivot-таблицы). Ловит ошибки, которые
- * проявились бы только в рантайме: опечатку в имени таблицы, забытую миграцию,
- * pivot с именем по умолчанию (product_promotion вместо promotion_product).
- */
+// fillable, casts и связи моделей смотрят в существующие таблицы и колонки: ловит опечатки
+// и pivot с именем по умолчанию (product_promotion вместо promotion_product)
 class SchemaMatchesModelsTest extends TestCase
 {
     use RefreshDatabase;
@@ -93,8 +89,6 @@ class SchemaMatchesModelsTest extends TestCase
     }
 
     /**
-     * Связи — публичные методы без параметров с типом возврата Relation.
-     *
      * @param  class-string<Model>  $class
      * @return array<string, Relation<Model, Model, mixed>>
      */
@@ -104,7 +98,7 @@ class SchemaMatchesModelsTest extends TestCase
         $model = new $class;
 
         foreach ((new ReflectionClass($class))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
-            // Только наш код: у пакетов свои связи (у spatie, например, teams() для выключенного режима команд)
+            // У пакетов свои связи (spatie teams() при выключенных командах)
             if (! str_starts_with((string) $method->getFileName(), app_path())) {
                 continue;
             }

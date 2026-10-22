@@ -20,7 +20,6 @@ use Random\Engine\Xoshiro256StarStar;
 use Random\Randomizer;
 use Tests\TestCase;
 
-/** Мини-игра: раскладка полётов, проверка выстрелов на сервере и награда на кошелёк. */
 class GameTest extends TestCase
 {
     use RefreshDatabase;
@@ -34,11 +33,8 @@ class GameTest extends TestCase
         $this->travelTo('2026-10-19 08:00:00');
     }
 
-    /**
-     * Кряква в t=2000 ровно в (200, 200), золотой селезень в t=3000 — в (700, 200).
-     *
-     * @return array<string, mixed>
-     */
+    // Кряква в t=2000 ровно в (200, 200), золотой селезень в t=3000 — в (700, 200)
+    /** @return array<string, mixed> */
     private function plan(): array
     {
         return [
