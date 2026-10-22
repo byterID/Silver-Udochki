@@ -2,8 +2,7 @@
 
 # 🎣 Silver Udochki
 
-**Веб-приложение для рыболовов: каталог, личный кабинет, панель управления
-с гибкой системой ролей и фоновая обработка тяжёлых задач через Apache Kafka.**
+**Интернет-магазин для любителей охоты и рыбалки**
 
 [![CI](https://github.com/byterID/Silver-Udochki/actions/workflows/ci.yml/badge.svg)](https://github.com/byterID/Silver-Udochki/actions/workflows/ci.yml)
 ![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)
@@ -12,41 +11,24 @@
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-4.1%20KRaft-231F20?logo=apachekafka&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-[Сайт](https://silver-udochki.ru) · [Архитектура](#-архитектура) · [Быстрый старт](#-быстрый-старт) · [Фоновые задачи](#-фоновые-задачи) · [Деплой](#-cicd-и-деплой)
+[Сайт](https://silver-udochki.ru) · [Архитектура](#-архитектура) · [Быстрый старт](#-быстрый-старт) · [Мониторинг](#-мониторинг) · [CI/CD](#-cicd) · [Документация](https://github.com/byterID/Silver-Udochki/tree/orphan/docs)
 
 </div>
 
 ---
-
-## ✨ Возможности
-
-- **Каталог и корзина** — витрина «Лавка»: 4 раздела, 36 категорий, 542 позиции в PostgreSQL.
-- **Акции** — скидки на товары, промокоды и бесплатная доставка из панели управления; цены считает сервер.
-- **Остатки и склад** — точный остаток на карточке, «осталось мало» при малом запасе, журнал движений товара.
-- **Кошелёк и заказы** — виртуальный баланс 20 000 ₽, оформление заказа одной транзакцией, история заказов и возвраты.
-- **Мини-игра «Утиная зорька»** — единственный способ заработать рубли; награду считает сервер.
-- **Отчёт об остатках** — CSV со склада собирается фоновой задачей через Kafka.
-- **Роли и права** — панель управления на `spatie/laravel-permission`, группы действий, гибкая выдача доступа.
-- **Фоновые задачи** — тяжёлый запрос не держит пользователя на странице: сервер сразу выдаёт тикет, а работу выполняет воркер.
-- **Живой статус** — страница задачи обновляется сама и показывает «В очереди → Выполняется → Готово».
-- **Уведомления** — колокольчик в шапке загорается, когда задача завершена, на любой странице сайта.
-- **Скачивание результата** — CSV-журнал выполнения хранится 5 минут, на странице идёт обратный отсчёт.
-- **Отказоустойчивость** — сторож находит потерянные и зависшие задачи и возвращает их в работу.
-- **Диагностика** — страница, показывающая, как запрос дошёл до сервера.
-
-## 🧰 Стек
+## Стек
 
 | Слой | Технологии |
 |---|---|
 | Бэкенд | PHP 8.4 (FPM), Laravel 13, spatie/laravel-permission |
 | Фронтенд | Blade, Tailwind CSS, Alpine.js, Vite |
 | Данные | PostgreSQL 17 |
-| Очередь событий | Apache Kafka 4.1 (KRaft, без ZooKeeper), `mateusjunges/laravel-kafka` + `ext-rdkafka` |
+| События | Apache Kafka 4.1 (KRaft), `mateusjunges/laravel-kafka` + `ext-rdkafka` |
 | Инфраструктура | Docker Compose, nginx, Certbot, Ansible, Tailscale |
 | Мониторинг | Prometheus, Grafana, node-exporter, cAdvisor, postgres-exporter, nginx-exporter |
 | Качество | Pint, PHPStan (Larastan), PHPUnit, ShellCheck, Gitleaks, GitHub Actions |
 
-## 🏗 Архитектура
+## Схема архитектуры
 
 ```mermaid
 flowchart LR
@@ -62,36 +44,16 @@ flowchart LR
     K -->|группа notifier| TN[task-notifier]
     TN -->|уведомление| DB
 
-    SC[scheduler] -->|reconcile / prune| DB
+    SC[scheduler] -->|сторож, очистка| DB
     SC -.->|переотправка| K
     A -->|скачивание| S
 ```
 
-Kafka используется как **шина событий**: веб-приложение не знает, кто и как обработает задачу.
-Каждый потребитель читает топик в своей consumer group, поэтому новых подписчиков
-(письма, аналитика) можно добавлять, не трогая существующий код.
+Подробности технической реализации — в [документации](https://github.com/byterID/Silver-Udochki/tree/orphan/docs).
 
-### Сервисы
+## Быстрый запуск
 
-| Сервис | Назначение | Пользователь |
-|---|---|---|
-| `web` | nginx, TLS, статика, проксирование в php-fpm | — |
-| `app` | Laravel, обработка HTTP-запросов | `www-data` |
-| `db` | PostgreSQL 17 | `postgres` |
-| `kafka` | брокер и контроллер в одном узле (KRaft), heap 256 МБ, `mem_limit: 700m` | — |
-| `kafka-init` | разово выставляет права на volume `kafka-data` и завершается | root |
-| `task-worker` | `tasks:consume` — выполняет задачи | `www-data` |
-| `task-notifier` | `tasks:notify` — создаёт уведомления | `www-data` |
-| `scheduler` | `schedule:work` — сторож и очистка результатов | `www-data` |
-
-Экспортеры мониторинга вынесены в `docker-compose.monitoring.yml` и слушают только Tailscale-адрес.
-
-> 🔒 У Kafka нет секции `ports:` — брокер доступен только внутри docker-сети.
-> Аутентификации у неё нет, поэтому публиковать порт наружу нельзя.
-
-## 🚀 Быстрый старт
-
-Нужны Docker и Docker Compose v2.
+Нужны Docker с Docker Compose v2 и Git (на Windows команды `sh` запускаются из Git Bash или WSL).
 
 ```bash
 git clone https://github.com/byterID/Silver-Udochki.git
@@ -99,294 +61,52 @@ cd Silver-Udochki
 cp .env.example .env
 ```
 
-Заполните в `.env` как минимум `DB_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Затем сгенерируйте ключ
-и вставьте его в `APP_KEY=`. `.env` примонтирован в контейнер только для чтения, поэтому ключ
-выводится на экран, а не записывается в файл:
+В `.env` заполнить `DB_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` и `APP_KEY`.
 
 ```bash
 docker compose run --rm --no-deps app php artisan key:generate --show
 ```
 
-Запуск:
+Запуск локально
 
 ```bash
 docker compose -f docker-compose.yml -f compose.local.yml up -d --build
-sh docker/kafka/create-topics.sh          # на Windows — из Git Bash или WSL
+sh docker/kafka/create-topics.sh
 docker compose exec app php artisan migrate --seed
 ```
 
-Локально всегда указывайте оба файла: `compose.local.yml` публикует `web` на `127.0.0.1:8080`
-(в базовом `docker-compose.yml` портов у него нет, там HTTPS и Certbot). Без него сайт
-на `http://127.0.0.1:8080` не откроется. Команды `exec`, `logs`, `ps` флагов не требуют.
+Сайт откроется на <http://127.0.0.1:8080>, вход — `ADMIN_EMAIL` и `ADMIN_PASSWORD` из `.env`.
 
-### 🗂 Каталог
-
-Исходные данные каталога лежат в `database/data/catalog.php`, загружает их `CatalogSeeder`
-(он входит в `--seed`). Сидер **полностью перезаписывает** главы, категории и товары,
-поэтому на продакшене его вручную не запускают.
-
-```bash
-# перезалить каталог из database/data/catalog.php
-docker compose exec app php artisan db:seed --class=CatalogSeeder --force
-
-# снять дамп текущего каталога в database/dumps/catalog.sql
-sh docker/db/catalog-dump.sh
-
-# развернуть каталог из дампа (вместо сидера; миграции должны быть применены)
-sh docker/db/catalog-restore.sh
-```
-
-> ⚠️ И сидер, и восстановление из дампа делают `TRUNCATE products ... CASCADE`: вместе с товарами
-> стираются и их привязки к акциям (`promotion_product`). Сами акции остаются, товары в них
-> нужно выбрать заново. Строки заказов на товары не ссылаются внешним ключом, их это не затрагивает.
-
-### 🏷 Акции
-
-Акции заводятся в панели управления (раздел «🏷️ Акции»). Доступ определяется правами, а не ролью:
-«Просмотр», «Создание», «Изменение» и «Удаление акций» (группа «Акции»). По умолчанию они есть
-у администратора и менеджера, а в «Управлении доступом» их можно выдать или отнять у любой роли.
-
-| Вид | К чему применяется | Как срабатывает |
-|---|---|---|
-| Скидка в процентах | выбранные товары (поиск и множественный выбор в форме) | сама, пока акция действует |
-| Промокод на сумму | весь заказ, не больше его суммы | покупатель вводит код в корзине; можно задать лимит использований |
-| Бесплатная доставка | весь заказ | сумма заказа не меньше порога; из нескольких действует самый низкий порог |
-
-- На товар действует **не больше одной** акции (`product_id` в `promotion_product` уникален).
-- Промокод суммируется со скидками на товары и вычитается из суммы после них.
-- Цены считает только `Services/Pricing/PriceCalculator`. Корзина хранится в `localStorage`, но
-  отправляет на `POST /cart/quote` лишь id и количество и получает цены, скидки и порог доставки.
-  Промокод хранится в сессии. Подбор кодов ограничен: 10 попыток в минуту и 60 в час с одного IP.
-- Доска в лавке показывает действующие акции цветом мела, выбранным в форме. За 3 дня до конца
-  таймер желтеет, в последние сутки надпись пульсирует и краснеет, в последний час мигает чаще.
-- Цены и скидки копируются в `orders` / `order_items` на момент покупки. Счётчик использований
-  промокода (`used_count`) растёт при оформлении заказа.
-
-
-<details>
-<summary><b>Проверить, что пайплайн работает</b></summary>
+Проверить, что фоновые задачи работают:
 
 ```bash
 docker compose exec app php artisan tasks:demo --seconds=5
 docker compose logs -f task-worker task-notifier
 ```
 
-Через несколько секунд задача станет «Готово», а в колокольчике появится уведомление.
+Успешный тест: через несколько секунд задача перейдёт в статус Готово, в колокольчике появится уведомление.
 
-</details>
+## Как устроен мониторинг
 
-### 🛒 Магазин: остатки, кошелёк, заказы, возвраты
+Prometheus и Grafana работают на локальной виртуальной машине и снимают метрики с сервера по Tailscale ip адресу.(поэтому на скриншотах видны "падения". компьютер уходил в сон.)
+На самом сервере запущены только экспортеры. Алерты настроены, уведомления приходят в Telegram-бота.
 
-- **Остатки.** Остаток меняет только `Services/Stock/StockKeeper` (блокировка строки + запись в
-  `stock_movements`), отрицательным он стать не может. Начальный остаток — 100. Когда запас
-  ниже `shop.low_stock` (10), карточка показывает красное «осталось мало».
-- **Кошелёк.** Каждому зарегистрированному выдаётся 20 000 ₽ (`shop.welcome_balance`; для
-  существующих пользователей — data-миграцией). Деньги двигает только `Services/Wallet/WalletKeeper`,
-  у операции есть `reference` (уникален в паре с кошельком), поэтому повтор не спишет и не начислит дважды.
-  История операций — в меню под ником. Ручного начисления нет: заработать можно только в игре.
-- **Оформление.** `POST /orders` → `Services/Orders/OrderPlacer` в одной транзакции блокирует кошелёк,
-  товары (по возрастанию id), промокод, заново считает цену и при расхождении с суммой, которую
-  видел покупатель, отвечает 409 со свежим расчётом. Ключ `checkout_key` делает повтор идемпотентным.
-  Доставка — `shop.delivery_price` (700 ₽), бесплатная при подходящей акции.
-- **Возвраты.** В окне «Мои заказы» у оплаченного заказа есть «Оформить возврат»
-  (`Services/Orders/OrderRefunder`): частичный по строкам, срок `shop.return_days` (14 дней),
-  деньги и остатки возвращаются, доставка — вместе с последним товаром.
-- **Мини-игра** (`/game`, ссылка в меню под ником). Сервер выдаёт план полёта уток
-  (`Services/Game/FlightPlanner`), браузер присылает выстрелы, `ShotJudge` проверяет их на
-  выполнимость, `GameMaster` начисляет награду. Лимит — `game.daily_limit` (3000 ₽ за 24 часа).
-  Правила копируются в раунд при старте.
-- **Отчёт об остатках.** Тип задачи `stock_report` (`Tasks/StockReportRunner`) идёт тем же
-  Kafka-конвейером, что и демо-отчёт; CSV в формате `;` с BOM, фильтр «мало» / «нет в наличии».
-  Доступ — отдельное право «Создание отчёта остатков» (по умолчанию у admin и manager).
-  Новые права добавляются data-миграциями, потому что деплой запускает только `migrate`.
+![Дашборд общей нагрузки](.github/img/node-dashboard.png)
+![Дашборд контейнеров](.github/img/cadvisor-dashboard.png)
+![Дашборд базы данных](.github/img/database-dashboard.png)
+![Правила алертов](.github/img/alerts.png)
+![Уведомление в Telegram](.github/img/telegram-alert.png)
 
-## ⚙️ Фоновые задачи
+Весь стек кушает около 1–1,3 ГБ памяти, поэтому на сервере с 2 ГБ RAM включён swap.
 
-### Путь задачи
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Пользователь
-    participant A as app
-    participant K as Kafka
-    participant W as task-worker
-    participant N as task-notifier
-
-    U->>A: POST /tasks
-    A->>A: INSERT task (pending)
-    A->>K: tasks.requested, ключ = user_id
-    A-->>U: 202 + ссылка на тикет
-    K->>W: сообщение
-    W->>W: claim: pending → processing
-    W->>W: выполнение, запись CSV
-    W->>W: done, commit оффсета
-    W->>K: tasks.completed
-    K->>N: событие
-    N->>N: уведомление в БД, notified_at
-    U->>A: опрос статуса и колокольчика
-    A-->>U: Готово, можно скачать
-```
-
-### Топики
-
-| Топик | Партиции | Ключ | Кто пишет → кто читает |
-|---|---|---|---|
-| `tasks.requested` | 3 | `user_id` | app, scheduler → task-worker |
-| `tasks.completed` | 1 | `user_id` | task-worker, scheduler → task-notifier |
-| `tasks.requested.dlq` | 1 | — | сообщения, которые не удалось разобрать |
-
-Ключ `user_id` гарантирует, что задачи одного пользователя выполняются по очереди, а задачи
-разных пользователей — параллельно. Воркеров больше, чем партиций (3), запускать бессмысленно.
-
-### Статусы
-
-```mermaid
-stateDiagram-v2
-    [*] --> pending
-    pending --> processing: claim
-    processing --> done
-    processing --> failed
-    processing --> pending: сторож, есть попытки
-    processing --> failed: сторож, попытки кончились
-    done --> [*]
-    failed --> [*]
-```
-
-### Гарантии доставки
-
-- **At-least-once.** Оффсет коммитится только после обработки, поэтому при падении воркера сообщение придёт снова.
-- **Идемпотентность.** `claim()` — атомарный `UPDATE ... WHERE status = 'pending'`, повторное сообщение просто пропускается.
-- **Сторож (`tasks:reconcile`, раз в минуту)** переотправляет задачи, не дошедшие до Kafka (`published_at IS NULL`),
-  возвращает зависшие в `processing`, повторно публикует задачи, которые попали в Kafka, но не были взяты,
-  переводит в `failed` задачи, ждущие дольше `TASKS_PENDING_TIMEOUT_MINUTES`, и догоняет неотправленные
-  события о завершении. Если Kafka недоступна или нет топиков, команда завершается с ошибкой — это видно
-  в `docker compose logs scheduler`.
-- **Graceful shutdown.** На SIGTERM воркер доделывает текущую задачу (`stop_grace_period: 90s`).
-- **Очистка (`tasks:prune-results`, раз в минуту)** удаляет файлы результатов через 5 минут после завершения.
-
-### Artisan-команды
-
-| Команда | Что делает |
-|---|---|
-| `tasks:consume` | воркер задач (запущен в `task-worker`) |
-| `tasks:notify` | нотификатор (запущен в `task-notifier`) |
-| `tasks:reconcile` | сторож потерянных и зависших задач |
-| `tasks:prune-results` | удаление просроченных файлов |
-| `notifications:prune` | удаление уведомлений старше недели (раз в час) |
-| `tasks:demo --seconds=5 --count=1 --user=` | создать демо-задачи для отладки |
-
-### Переменные окружения
-
-| Переменная | По умолчанию | Описание |
-|---|---|---|
-| `KAFKA_BROKERS` | `kafka:9092` | адрес брокера внутри docker-сети |
-| `KAFKA_OFFSET_RESET` | `earliest` | откуда читать новой consumer group |
-| `TASKS_STALE_AFTER_MINUTES` | `10` | через сколько задача в `processing` считается зависшей |
-| `TASKS_RESULT_TTL_MINUTES` | `5` | сколько хранится файл результата |
-| `TASKS_NOTIFICATIONS_TTL_DAYS` | `7` | через сколько дней уведомления удаляются автоматически |
-| `COMPOSE_FILE` | — | на сервере: `docker-compose.yml:docker-compose.monitoring.yml` |
-
-## 🔍 Отладка Kafka
-
-```bash
-# список топиков
-docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
-
-# оффсеты и отставание группы воркеров
-docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
-  --bootstrap-server localhost:9092 --describe --group task-workers
-
-# два воркера — увидеть ребаланс партиций
-docker compose up -d --scale task-worker=2
-```
-
-В выводе `--describe` колонка `LAG` показывает, сколько сообщений ещё не обработано.
-Ноль — воркеры успевают.
-
-## 📊 Мониторинг
-
-Prometheus и Grafana работают на отдельной машине и снимают метрики с сервера по Tailscale.
-
-| Экспортер | Порт | Что показывает |
-|---|---|---|
-| node-exporter | 9100 | CPU, память, диск, сеть хоста |
-| cAdvisor | 8080 | ресурсы каждого контейнера |
-| postgres-exporter | 9187 | соединения, транзакции, размер БД |
-| nginx-exporter | 9113 | запросы и соединения nginx |
-
-Ориентировочное потребление памяти всего стека — **1–1,3 ГБ**, поэтому на сервере с 2 ГБ RAM включён swap.
-
-## 🔄 CI/CD и деплой
+## Схема CI/CD
 
 ```mermaid
 flowchart LR
-    P[push / PR] --> T[tests]
-    T --> T1[Pint] --> T2[PHPStan] --> T3[PHPUnit] --> T4[compose config<br/>ShellCheck] --> T5[Docker build] --> T6[Gitleaks]
-    T6 -->|только main| D[deploy]
+    P[push / PR] --> L[Проверка_стилей<br/>Pint] --> S[Проверка_ошибок<br/>PHPStan] --> T[Unit_тесты<br/>PostgreSQL 17] --> C[Проверка конфига сборки<br/>ShellCheck] --> B[Сборка Docker] --> G[Gitleaks]
+    G -->|только main| D[Деплой на VPS по SSH]
 ```
 
-Деплой при push в `main` по SSH:
-
-1. `git merge --ff-only origin/main`
-2. бэкап базы (хранится 14 дней)
-3. `docker compose build` — сайт пока работает на старом коде
-4. `up -d db kafka` и создание топиков
-5. миграции в разовом контейнере из нового образа
-6. `up -d --remove-orphans` — перезапуск на новом коде
-7. проверка, что ни один контейнер не ушёл в рестарт-цикл, и smoke-check сайта
-
-Миграции пишутся обратно совместимыми (только новые таблицы и nullable-колонки),
-поэтому их можно выполнять, пока работает старая версия.
-
-Сервер настраивается Ansible-плейбуком (`server.yml`): Docker, ufw, Tailscale,
-swap, SSH-ключи и шаблон `.env` с правами `0640` для группы `www-data` (gid 82).
-
-## 🧯 Частые проблемы
-
-<details>
-<summary><code>Class "..." not found</code> после изменения кода</summary>
-
-Код запечён в образ. После любых изменений PHP, `composer.json` или `config/`
-нужна пересборка: `docker compose -f docker-compose.yml -f compose.local.yml up -d --build`. Исключение — `.env`, хватит перезапуска.
-
-</details>
-
-<details>
-<summary><code>relation "..." does not exist</code> на страницах</summary>
-
-В базе не применены миграции (после пересборки с новыми миграциями или на свежей установке).
-При старте контейнера в `docker compose logs app` в этом случае есть строка «ВНИМАНИЕ: в базе
-есть непримененные миграции». Применить: `docker compose exec app php artisan migrate`.
-Чтобы локально миграции шли сами при каждом старте, задайте в `.env` `RUN_MIGRATIONS=true`
-(работает и на пустой базе с `CACHE_STORE=database`: см. `app:migrate-on-boot`).
-
-</details>
-
-<details>
-<summary>Скачивание результата отдаёт 410</summary>
-
-Либо истёк срок хранения (5 минут), либо у `task-worker` нет общего volume `app-storage`
-или он запущен не от `www-data`. Проверка от имени веб-процесса:
-`docker compose exec -u www-data app ls storage/app/private/results`.
-
-</details>
-
-<details>
-<summary>Kafka падает с <code>AccessDeniedException</code></summary>
-
-Нет прав на volume `kafka-data`. Их выставляет `kafka-init` — проверьте, что он
-завершился успешно: `docker compose ps -a kafka-init`.
-
-</details>
-
-<details>
-<summary>В логах воркера <code>Name does not resolve</code> или <code>Connection refused</code></summary>
-
-Kafka перезапускается или ещё загружается. librdkafka переподключается сам —
-если ошибки прекратились, всё в порядке.
-
-</details>
 
 ---
 
